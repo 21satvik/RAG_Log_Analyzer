@@ -32,8 +32,8 @@ load_dotenv()
 
 # Page config
 st.set_page_config(
-    page_title="Log Analyzer Pro",
-    page_icon="🔥",
+    page_title="LogGuard",
+    page_icon="🛡️",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
@@ -233,7 +233,7 @@ def main():
     # Header
     st.markdown("""
         <h1 style='text-align: center; margin-bottom: 0;'>
-            🔥 Log Analyzer Pro
+            🛡️ LogGuard
         </h1>
         <p style='text-align: center; color: white; opacity: 0.9; margin-top: 0.5rem; font-size: 1.1rem;'>
             AI-powered incident analysis with instant knowledge base insights
