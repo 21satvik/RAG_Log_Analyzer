@@ -1,0 +1,73 @@
+2026-02-01 03:00:00 INFO  [Server_A:bootstrap] Production Database Server_A startup initiated
+2026-02-01 03:00:00 INFO  [database:connection-pool] Initializing PostgreSQL connection pool (min=10, max=200)
+2026-02-01 03:00:01 INFO  [database:connection-pool] Pool initialized: 10 connections active, 190 available
+2026-02-01 03:00:02 INFO  [Server_A:server] Database server listening on prod-db-01.internal:5432
+2026-02-01 03:00:03 INFO  [health-check] Server_A health: OK (all dependencies accessible)
+
+# Normal operation - production traffic
+2026-02-01 03:15:23 INFO  [api:request] GET /api/v1/users/sarah.chen@company.com (200 OK, 45ms)
+2026-02-01 03:15:24 INFO  [database:query] SELECT * FROM users WHERE email='sarah.chen@company.com' (12ms)
+2026-02-01 03:15:25 INFO  [auth:login] User login successful - email: mike.rodriguez@company.com, ip: 192.168.1.45
+2026-02-01 03:16:12 INFO  [api:request] GET /api/v1/orders/customer/123 (200 OK, 35ms)
+2026-02-01 03:16:13 INFO  [database:query] SELECT * FROM orders WHERE customer_id=123 (8ms)
+2026-02-01 03:16:45 INFO  [payment:process] Processing payment for Allen Higgins - card: 4532-1234-5678-9010, amount: $299.99
+2026-02-01 03:16:46 INFO  [user:profile] Profile update - Name: Allen Higgins, SSN: 123-45-6789, Phone: +1-555-0123
+2026-02-01 03:17:00 INFO  [database:query] UPDATE users SET last_login='2026-02-01 03:17:00' WHERE email='allen.higgins@company.com' (6ms)
+
+# Traffic spike begins
+2026-02-01 03:30:00 INFO  [metrics:traffic] Current RPS: 1250 (avg: 800)
+2026-02-01 03:30:01 INFO  [database:connection-pool] Pool status: 85 active, 115 available
+2026-02-01 03:30:15 INFO  [api:request] GET /api/v1/dashboard/analytics (200 OK, 2340ms)
+2026-02-01 03:30:16 WARN  [database:slow-query] Query exceeded 2s threshold: SELECT * FROM analytics_events WHERE timestamp > '2026-01-01' AND user_id IN (SELECT...)
+2026-02-01 03:30:30 INFO  [metrics:traffic] Current RPS: 2100 (avg: 1200)
+2026-02-01 03:30:45 INFO  [user:access] Customer support access - Agent: Lisa Park (lisa.park@company.com), viewing customer SSN: 987-65-4321
+
+# Connection pool exhaustion begins
+2026-02-01 03:31:00 WARN  [database:connection-pool] Pool utilization high: 150/200 active connections on Server_A
+2026-02-01 03:31:05 ERROR [database:connection] Connection acquisition timeout: pool exhausted (waited 5000ms)
+2026-02-01 03:31:05 ERROR [api:request] GET /api/v1/orders/history failed: Server_A connection timeout - user: tom.bradley@company.com, ip: 203.0.113.78
+2026-02-01 03:31:06 ERROR [database:connection] Connection acquisition timeout: pool exhausted (waited 5000ms)
+2026-02-01 03:31:06 ERROR [api:request] POST /api/v1/checkout failed: database connection timeout - customer: John Smith, card ending in 4532
+2026-02-01 03:31:10 CRITICAL [database:connection-pool] Server_A connection pool EXHAUSTED: 200/200 active, 0 available
+2026-02-01 03:31:10 ERROR [api:request] GET /api/v1/users/789 failed: HikariPool-1 - Connection is not available, request timed out after 5000ms
+2026-02-01 03:31:11 ERROR [api:request] POST /api/v1/payments failed: Could not acquire connection from pool within 5000ms
+2026-02-01 03:31:11 ERROR [payment:failed] Payment failure for card 5555-6666-7777-8888, customer email: rachel.thompson@company.com
+2026-02-01 03:31:12 CRITICAL [alerting:pagerduty] P1 incident triggered: Server_A (Production Database) connection pool exhausted
+2026-02-01 03:31:15 ERROR [database:connection] java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available
+2026-02-01 03:31:15 ERROR [database:connection]     at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:695)
+2026-02-01 03:31:15 ERROR [database:connection]     at com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:197)
+2026-02-01 03:31:20 WARN  [database:connection-pool] Attempting to identify stale connections on Server_A...
+2026-02-01 03:31:21 INFO  [database:admin] Running query: SELECT pid, age(clock_timestamp(), query_start), usename, query FROM pg_stat_activity WHERE state != 'idle' ORDER BY query_start
+2026-02-01 03:31:21 WARN  [database:admin] Found long-running query (running 325s): PID 12845, user=app_user, query=SELECT * FROM analytics_events...
+2026-02-01 03:31:22 INFO  [audit:access] Admin access to Server_A - Administrator: Dr. James Wilson (james.wilson@company.com), IP: 10.0.1.100
+
+# Cascading failures - customer impact
+2026-02-01 03:31:25 ERROR [api:request] GET /api/v1/profile (500 Internal Server Error, 5010ms) - user: david.kumar@company.com, SSN lookup failed
+2026-02-01 03:31:26 ERROR [api:request] GET /api/v1/orders (500 Internal Server Error, 5009ms) - database timeout for customer ip: 198.51.100.45
+2026-02-01 03:31:27 ERROR [api:request] POST /api/v1/comments (500 Internal Server Error, 5011ms) - database timeout
+2026-02-01 03:31:28 ERROR [payment:process] Payment processing failed - Card: 4532-1234-5678-9010 (Allen Higgins), Error: Database unavailable
+2026-02-01 03:31:30 CRITICAL [metrics:errors] Error rate spiked: 458 errors/min (baseline: 2 errors/min) on Server_A
+2026-02-01 03:31:35 INFO  [oncall:notification] Sarah Chen (Database Team) paged for P1 incident - contact: sarah.chen@company.com, phone: ext. 5432
+2026-02-01 03:31:40 INFO  [database:admin] Investigating Server_A connection pool status...
+2026-02-01 03:31:41 WARN  [database:admin] Identified problematic query: analytics report running for 350+ seconds
+2026-02-01 03:31:42 INFO  [database:admin] Terminating long-running query: PID 12845
+2026-02-01 03:31:43 INFO  [database:admin] Query terminated successfully by sarah.chen@company.com
+
+# Recovery phase
+2026-02-01 03:31:45 INFO  [database:connection-pool] Connections being returned to pool on Server_A...
+2026-02-01 03:31:46 INFO  [database:connection-pool] Pool status: 145 active, 55 available
+2026-02-01 03:31:50 INFO  [database:connection-pool] Pool status: 95 active, 105 available
+2026-02-01 03:31:55 INFO  [api:request] GET /api/v1/users/123 (200 OK, 67ms) - service recovering
+2026-02-01 03:32:00 INFO  [database:connection-pool] Server_A pool status: 65 active, 135 available
+2026-02-01 03:32:05 INFO  [metrics:errors] Error rate returning to normal: 12 errors/min
+2026-02-01 03:32:10 INFO  [database:connection-pool] Pool status: 45 active, 155 available (healthy)
+2026-02-01 03:32:15 INFO  [alerting:pagerduty] Incident resolved: Server_A connection pool recovered
+2026-02-01 03:32:20 INFO  [oncall:notification] Incident #2024-0042 resolved by Sarah Chen in 5 minutes
+
+# Post-incident monitoring
+2026-02-01 03:35:00 INFO  [database:connection-pool] Server_A pool status: 32 active, 168 available (normal)
+2026-02-01 03:35:01 INFO  [metrics:traffic] Current RPS: 1180 (normal range)
+2026-02-01 03:35:02 INFO  [api:request] GET /api/v1/orders (200 OK, 45ms)
+2026-02-01 03:35:15 INFO  [audit:summary] Incident affected 847 customers, 23 failed payment transactions
+2026-02-01 03:35:16 INFO  [audit:pii-accessed] During incident: 15 SSN lookups, 47 payment card validations, 234 email accesses
+2026-02-01 03:36:00 INFO  [incident:report] Full incident report generated - similar to incident #2024-0051 (Nov 19, 2024)

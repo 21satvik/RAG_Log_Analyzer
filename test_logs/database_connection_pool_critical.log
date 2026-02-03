@@ -1,0 +1,65 @@
+2026-02-01 14:00:00 INFO  [app-service:bootstrap] Application startup initiated
+2026-02-01 14:00:00 INFO  [database:connection-pool] Initializing PostgreSQL connection pool (min=10, max=200)
+2026-02-01 14:00:01 INFO  [database:connection-pool] Pool initialized: 10 connections active, 190 available
+2026-02-01 14:00:01 INFO  [redis:cluster] Connecting to Redis cluster: prod-redis-01.internal:6379
+2026-02-01 14:00:02 INFO  [redis:cluster] Redis cluster healthy: 3 nodes, quorum achieved
+2026-02-01 14:00:02 INFO  [metrics:prometheus] Prometheus metrics endpoint active on :9090
+2026-02-01 14:00:03 INFO  [app-service:server] HTTP server listening on 0.0.0.0:8080
+2026-02-01 14:00:03 INFO  [health-check] Service health: OK (all dependencies accessible)
+
+# Normal operation for 30 minutes
+2026-02-01 14:15:23 INFO  [api:request] GET /api/v1/users/123 (200 OK, 45ms)
+2026-02-01 14:15:24 INFO  [api:request] POST /api/v1/orders (201 Created, 120ms)
+2026-02-01 14:15:25 INFO  [database:query] SELECT * FROM users WHERE id=123 (12ms)
+2026-02-01 14:15:26 INFO  [cache:hit] Cache hit for user:123 (ttl=3600s)
+2026-02-01 14:16:12 INFO  [api:request] GET /api/v1/products/456 (200 OK, 35ms)
+2026-02-01 14:16:13 INFO  [database:query] SELECT * FROM products WHERE id=456 (8ms)
+
+# Traffic starts ramping up
+2026-02-01 14:30:00 INFO  [metrics:traffic] Current RPS: 1250 (avg: 800)
+2026-02-01 14:30:01 INFO  [database:connection-pool] Pool status: 85 active, 115 available
+2026-02-01 14:30:15 INFO  [api:request] GET /api/v1/dashboard/analytics (200 OK, 2340ms)
+2026-02-01 14:30:16 WARN  [database:slow-query] Query exceeded 2s threshold: SELECT * FROM analytics_events WHERE timestamp > '2026-01-01' AND user_id IN (SELECT...)
+2026-02-01 14:30:30 INFO  [metrics:traffic] Current RPS: 2100 (avg: 1200)
+
+# Long-running analytics query starts causing issues
+2026-02-01 14:31:00 WARN  [database:connection-pool] Pool utilization high: 150/200 active connections
+2026-02-01 14:31:05 ERROR [database:connection] Connection acquisition timeout: pool exhausted (waited 5000ms)
+2026-02-01 14:31:05 ERROR [api:request] GET /api/v1/orders/history failed: database connection timeout
+2026-02-01 14:31:06 ERROR [database:connection] Connection acquisition timeout: pool exhausted (waited 5000ms)
+2026-02-01 14:31:06 ERROR [api:request] POST /api/v1/checkout failed: database connection timeout
+2026-02-01 14:31:10 CRITICAL [database:connection-pool] Connection pool exhausted: 200/200 active, 0 available
+2026-02-01 14:31:10 ERROR [api:request] GET /api/v1/users/789 failed: HikariPool-1 - Connection is not available, request timed out after 5000ms
+2026-02-01 14:31:11 ERROR [api:request] POST /api/v1/payments failed: Could not acquire connection from pool within 5000ms
+2026-02-01 14:31:12 CRITICAL [alerting:pagerduty] P1 incident triggered: user-database connection pool exhausted
+2026-02-01 14:31:15 ERROR [database:connection] java.sql.SQLTransientConnectionException: HikariPool-1 - Connection is not available
+2026-02-01 14:31:15 ERROR [database:connection]     at com.zaxxer.hikari.pool.HikariPool.createTimeoutException(HikariPool.java:695)
+2026-02-01 14:31:15 ERROR [database:connection]     at com.zaxxer.hikari.pool.HikariPool.getConnection(HikariPool.java:197)
+2026-02-01 14:31:20 WARN  [database:connection-pool] Attempting to identify stale connections...
+2026-02-01 14:31:21 INFO  [database:admin] Running query: SELECT pid, age(clock_timestamp(), query_start), usename, query FROM pg_stat_activity WHERE state != 'idle' ORDER BY query_start
+2026-02-01 14:31:21 WARN  [database:admin] Found long-running query (running 325s): PID 12845, user=app_user, query=SELECT * FROM analytics_events...
+
+# Additional failed requests
+2026-02-01 14:31:25 ERROR [api:request] GET /api/v1/profile (500 Internal Server Error, 5010ms) - database timeout
+2026-02-01 14:31:26 ERROR [api:request] GET /api/v1/orders (500 Internal Server Error, 5009ms) - database timeout
+2026-02-01 14:31:27 ERROR [api:request] POST /api/v1/comments (500 Internal Server Error, 5011ms) - database timeout
+2026-02-01 14:31:30 CRITICAL [metrics:errors] Error rate spiked: 458 errors/min (baseline: 2 errors/min)
+2026-02-01 14:31:35 INFO  [oncall:notification] Sarah Chen (Database Team) paged for P1 incident
+2026-02-01 14:31:40 INFO  [database:admin] Investigating connection pool status...
+2026-02-01 14:31:41 WARN  [database:admin] Identified problematic query: analytics report running for 350+ seconds
+2026-02-01 14:31:42 INFO  [database:admin] Terminating long-running query: PID 12845
+2026-02-01 14:31:43 INFO  [database:admin] Query terminated successfully
+2026-02-01 14:31:45 INFO  [database:connection-pool] Connections being returned to pool...
+2026-02-01 14:31:46 INFO  [database:connection-pool] Pool status: 145 active, 55 available
+2026-02-01 14:31:50 INFO  [database:connection-pool] Pool status: 95 active, 105 available
+2026-02-01 14:31:55 INFO  [api:request] GET /api/v1/users/123 (200 OK, 67ms) - service recovering
+2026-02-01 14:32:00 INFO  [database:connection-pool] Pool status: 65 active, 135 available
+2026-02-01 14:32:05 INFO  [metrics:errors] Error rate returning to normal: 12 errors/min
+2026-02-01 14:32:10 INFO  [database:connection-pool] Pool status: 45 active, 155 available (healthy)
+2026-02-01 14:32:15 INFO  [alerting:pagerduty] Incident resolved: connection pool recovered
+2026-02-01 14:32:20 INFO  [oncall:notification] Incident resolved by Sarah Chen in 5 minutes
+
+# Post-incident monitoring
+2026-02-01 14:35:00 INFO  [database:connection-pool] Pool status: 32 active, 168 available (normal)
+2026-02-01 14:35:01 INFO  [metrics:traffic] Current RPS: 1180 (normal range)
+2026-02-01 14:35:02 INFO  [api:request] GET /api/v1/orders (200 OK, 45ms)

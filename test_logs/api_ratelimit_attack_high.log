@@ -1,0 +1,43 @@
+2026-02-01 16:00:00 INFO  [api-gateway:startup] API Gateway initializing...
+2026-02-01 16:00:01 INFO  [api-gateway:ratelimit] Rate limiter configured: 100 req/min per IP
+2026-02-01 16:00:02 INFO  [api-gateway:server] HTTP server listening on :8080
+2026-02-01 16:00:03 INFO  [health-check] API Gateway: OK
+
+# Normal traffic
+2026-02-01 16:15:00 INFO  [api:request] GET /api/v1/products (200 OK) - client_ip=203.0.113.45
+2026-02-01 16:15:01 INFO  [api:request] POST /api/v1/auth/login (200 OK) - client_ip=198.51.100.23
+2026-02-01 16:15:02 INFO  [metrics:traffic] Current RPS: 145 (normal)
+
+# Suspicious traffic pattern starts
+2026-02-01 16:20:00 WARN  [ratelimit:threshold] IP 192.0.2.178 approaching rate limit: 85/100 req/min
+2026-02-01 16:20:15 WARN  [ratelimit:exceeded] IP 192.0.2.178 rate limit exceeded: 142 requests in 60s
+2026-02-01 16:20:15 INFO  [api:response] GET /api/v1/search?q=laptop (429 Too Many Requests) - client_ip=192.0.2.178
+2026-02-01 16:20:16 INFO  [api:response] GET /api/v1/search?q=phone (429 Too Many Requests) - client_ip=192.0.2.178
+2026-02-01 16:20:30 WARN  [ratelimit:threshold] IP 192.0.2.234 approaching rate limit: 92/100 req/min
+2026-02-01 16:20:45 WARN  [ratelimit:exceeded] IP 192.0.2.234 rate limit exceeded: 156 requests in 60s
+
+# Attack intensifies - multiple IPs
+2026-02-01 16:21:00 ERROR [security:attack-detected] Possible distributed attack: 15 IPs exceeding rate limits
+2026-02-01 16:21:01 WARN  [ratelimit:exceeded] IP 192.0.2.178 blocked: 289 requests in 60s (289% over limit)
+2026-02-01 16:21:02 WARN  [ratelimit:exceeded] IP 192.0.2.234 blocked: 267 requests in 60s (267% over limit)
+2026-02-01 16:21:03 WARN  [ratelimit:exceeded] IP 192.0.2.145 blocked: 312 requests in 60s (312% over limit)
+2026-02-01 16:21:05 CRITICAL [metrics:traffic] Abnormal traffic spike: 4500 RPS (baseline: 150 RPS)
+2026-02-01 16:21:06 ERROR [security:attack-detected] Bot attack suspected: User-Agent pattern detected across 23 IPs
+2026-02-01 16:21:06 ERROR [security:attack-detected] Common User-Agent: Mozilla/5.0 (compatible; bot/1.0)
+2026-02-01 16:21:10 CRITICAL [alerting:security] P1 security incident: API scraping attack in progress
+2026-02-01 16:21:11 INFO  [oncall:notification] David Kumar (Security Team) paged for P1 incident
+
+# Automated response
+2026-02-01 16:21:15 INFO  [security:auto-response] Enabling aggressive rate limiting: 20 req/min per IP
+2026-02-01 16:21:20 INFO  [security:auto-response] Blocking suspicious User-Agent pattern
+2026-02-01 16:21:25 INFO  [waf:rule-update] WAF rule deployed: block User-Agent contains 'bot/1.0'
+2026-02-01 16:21:30 INFO  [security:geo-block] Implementing geo-blocking for suspicious IP ranges
+2026-02-01 16:21:35 INFO  [metrics:blocked] Blocked requests: 1,247 in last 60s
+
+# Attack subsiding
+2026-02-01 16:22:00 INFO  [metrics:traffic] Traffic normalizing: 890 RPS (down from 4500)
+2026-02-01 16:22:30 INFO  [metrics:traffic] Traffic normal: 178 RPS
+2026-02-01 16:22:35 INFO  [security:analysis] Attack profile: 47 unique IPs, 8,234 total requests blocked
+2026-02-01 16:23:00 INFO  [security:response] Incident mitigated, monitoring continues
+2026-02-01 16:23:01 INFO  [alerting:security] Incident resolved: bot attack blocked by WAF rules
+2026-02-01 16:24:00 INFO  [security:report] Generating incident report for security team review

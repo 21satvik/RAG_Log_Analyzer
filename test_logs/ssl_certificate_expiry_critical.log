@@ -1,0 +1,43 @@
+2026-02-01 22:00:00 INFO  [cdn-edge:startup] CDN edge server initializing...
+2026-02-01 22:00:01 INFO  [ssl:config] Loading SSL certificates from /etc/ssl/certs/
+2026-02-01 22:00:02 INFO  [ssl:cert] Certificate loaded: *.company.com (expires: 2026-02-02 00:00:00 UTC)
+2026-02-01 22:00:03 INFO  [cdn-edge:server] HTTPS server listening on :443
+2026-02-01 22:00:04 INFO  [health-check] CDN edge server: OK
+
+# Normal operation
+2026-02-01 22:30:00 INFO  [cdn:request] GET /static/app.js (200 OK, 12ms, cached)
+2026-02-01 22:30:01 INFO  [cdn:request] GET /images/logo.png (200 OK, 8ms, cached)
+2026-02-01 23:00:00 INFO  [metrics:requests] Serving 2,450 req/min (healthy)
+
+# Warning about cert expiration
+2026-02-01 23:30:00 WARN  [ssl:expiration] Certificate *.company.com expires in 30 minutes
+2026-02-01 23:30:01 WARN  [alerting:ops] SSL certificate expiration warning sent to ops team
+2026-02-01 23:45:00 WARN  [ssl:expiration] Certificate *.company.com expires in 15 minutes
+2026-02-01 23:50:00 ERROR [ssl:expiration] Certificate *.company.com expires in 10 minutes - URGENT
+2026-02-01 23:55:00 CRITICAL [ssl:expiration] Certificate *.company.com expires in 5 minutes
+2026-02-01 23:59:00 CRITICAL [ssl:expiration] Certificate *.company.com expires in 1 minute
+2026-02-01 23:59:30 CRITICAL [alerting:pagerduty] P1 incident: SSL certificate expiring imminently
+
+# Certificate expires
+2026-02-02 00:00:00 FATAL [ssl:error] Certificate *.company.com has EXPIRED
+2026-02-02 00:00:01 ERROR [cdn:request] GET /api/v1/data (526 Invalid SSL Certificate)
+2026-02-02 00:00:02 ERROR [cdn:request] GET /dashboard (526 Invalid SSL Certificate)
+2026-02-02 00:00:03 ERROR [ssl:handshake] TLS handshake failed: certificate expired
+2026-02-02 00:00:04 ERROR [ssl:handshake] TLS handshake failed: certificate expired
+2026-02-02 00:00:05 CRITICAL [metrics:errors] SSL errors spiking: 145 errors/sec
+2026-02-02 00:00:10 INFO  [oncall:notification] Carlos Mendez (Infrastructure Team) paged for P1 incident
+
+# Emergency response
+2026-02-02 00:02:00 INFO  [admin:action] Requesting emergency certificate renewal from Let's Encrypt
+2026-02-02 00:02:15 INFO  [acme:challenge] DNS challenge initiated for *.company.com
+2026-02-02 00:02:30 INFO  [acme:validation] DNS propagation in progress...
+2026-02-02 00:03:00 INFO  [acme:validation] DNS validation successful
+2026-02-02 00:03:15 INFO  [acme:issue] Certificate issued by Let's Encrypt
+2026-02-02 00:03:30 INFO  [ssl:reload] Installing new certificate: *.company.com (expires: 2026-05-02)
+2026-02-02 00:03:45 INFO  [ssl:reload] Certificate installed successfully
+2026-02-02 00:03:46 INFO  [cdn-edge:reload] Reloading HTTPS server configuration...
+2026-02-02 00:03:50 INFO  [cdn-edge:server] HTTPS server reloaded with new certificate
+2026-02-02 00:04:00 INFO  [cdn:request] GET /api/v1/data (200 OK, 34ms) - SSL recovered
+2026-02-02 00:04:01 INFO  [metrics:errors] SSL error rate: 0 errors/sec (recovered)
+2026-02-02 00:04:30 INFO  [alerting:pagerduty] Incident resolved: SSL certificate renewed
+2026-02-02 00:05:00 INFO  [ssl:monitoring] New certificate valid for 90 days, auto-renewal scheduled

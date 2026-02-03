@@ -1,0 +1,34 @@
+# Production Requirements for RAG Log Analyzer v2.0
+
+# Core Dependencies
+streamlit
+pandas
+plotly
+
+# RAG Engine
+chromadb
+ollama
+requests
+urllib3
+
+# Data Processing
+numpy
+scipy
+
+# Utilities
+python-dotenv
+pyyaml
+python-dateutil
+reportlab
+
+# Logging & Monitoring
+structlog
+
+# Optional: For production deployment
+gunicorn
+whitenoise
+
+# Development (optional)
+pytest
+black
+flake8

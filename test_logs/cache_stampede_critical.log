@@ -1,0 +1,42 @@
+2026-02-01 18:00:00 INFO  [cache-cluster:startup] Redis cluster initializing...
+2026-02-01 18:00:01 INFO  [cache-cluster:nodes] Cluster nodes: redis-01, redis-02, redis-03 (3 masters, 3 replicas)
+2026-02-01 18:00:02 INFO  [cache-cluster:status] Cluster status: healthy, all nodes reachable
+2026-02-01 18:00:03 INFO  [health-check] Cache cluster: OK
+
+# Normal cache operation
+2026-02-01 18:30:00 INFO  [cache:stats] Hit rate: 94.5%, Evictions: 23/min (normal)
+2026-02-01 18:30:01 INFO  [cache:get] Cache hit: user:12345 (ttl=3540s)
+2026-02-01 18:30:02 INFO  [cache:get] Cache hit: product:catalog:homepage (ttl=1800s)
+
+# Popular cached item about to expire
+2026-02-01 19:00:00 INFO  [cache:stats] Hit rate: 96.2%, Evictions: 18/min (healthy)
+2026-02-01 19:00:15 WARN  [cache:expiration] High-traffic key expiring: product:catalog:featured (accessed 4500/min)
+2026-02-01 19:00:30 ERROR [cache:stampede] Cache miss stampede detected: product:catalog:featured
+2026-02-01 19:00:31 ERROR [cache:miss] Cache miss: product:catalog:featured (1 of 245 concurrent requests)
+2026-02-01 19:00:31 ERROR [database:surge] Database query surge: 245 simultaneous queries for same data
+2026-02-01 19:00:32 CRITICAL [database:overload] Database connection pool saturated: 198/200 active
+2026-02-01 19:00:33 ERROR [api:timeout] GET /api/v1/featured-products (timeout after 5000ms)
+2026-02-01 19:00:34 ERROR [database:slow-query] Query exceeded threshold: SELECT * FROM products WHERE featured=true (4856ms)
+2026-02-01 19:00:35 CRITICAL [metrics:database] Database CPU: 98%, Query latency: p95=4200ms (baseline: 50ms)
+
+# Cascading failure
+2026-02-01 19:00:40 ERROR [cache:miss] Stampede continuing: 567 cache misses for product:catalog:featured in 10s
+2026-02-01 19:00:41 ERROR [api:timeout] GET /api/v1/featured-products (timeout after 5000ms) x45 requests
+2026-02-01 19:00:45 CRITICAL [database:overload] Query queue depth: 423 queries waiting
+2026-02-01 19:00:46 ERROR [api:errors] Error rate: 67% (baseline: 0.1%)
+2026-02-01 19:00:50 CRITICAL [alerting:pagerduty] P1 incident: cache stampede causing database overload
+
+# Response and mitigation
+2026-02-01 19:01:00 INFO  [oncall:notification] Lisa Park (Performance Team) paged for P1 incident
+2026-02-01 19:01:30 INFO  [admin:action] Implementing emergency cache lock for product:catalog:featured
+2026-02-01 19:01:31 INFO  [cache:lock] Distributed lock acquired: only 1 process can refresh cache
+2026-02-01 19:01:35 INFO  [cache:refresh] Refreshing product:catalog:featured from database (locked)
+2026-02-01 19:01:38 INFO  [cache:set] Cache updated: product:catalog:featured (ttl=3600s)
+2026-02-01 19:01:39 INFO  [cache:lock] Distributed lock released
+2026-02-01 19:01:40 INFO  [cache:hit] Cache hit: product:catalog:featured (stampede resolved)
+2026-02-01 19:01:45 INFO  [database:recovery] Connection pool draining: 145/200 active
+2026-02-01 19:02:00 INFO  [database:recovery] Connection pool normal: 42/200 active
+2026-02-01 19:02:01 INFO  [metrics:database] Database CPU: 35%, Query latency: p95=48ms (recovered)
+2026-02-01 19:02:05 INFO  [api:recovery] Error rate: 0.2% (normal)
+2026-02-01 19:02:30 INFO  [alerting:pagerduty] Incident resolved: cache stampede mitigated
+2026-02-01 19:03:00 INFO  [admin:followup] Implementing probabilistic early expiration for high-traffic keys

@@ -1,0 +1,54 @@
+2026-02-01 10:00:00 INFO  [payment-processor:startup] Payment service initializing...
+2026-02-01 10:00:01 INFO  [payment-processor:config] Loaded payment gateways: stripe, paypal, square
+2026-02-01 10:00:02 INFO  [payment-processor:cache] Initializing payment token cache (max_size=10000)
+2026-02-01 10:00:03 INFO  [payment-processor:server] HTTP server listening on :8082
+2026-02-01 10:00:04 INFO  [health-check] Payment service: OK
+
+# Normal operation
+2026-02-01 10:15:00 INFO  [metrics:memory] Heap usage: 512MB / 2048MB (25%)
+2026-02-01 10:15:01 INFO  [payment:transaction] Processing payment: txn_abc123 ($129.99, stripe)
+2026-02-01 10:15:02 INFO  [payment:success] Payment completed: txn_abc123 (250ms)
+2026-02-01 10:20:00 INFO  [metrics:memory] Heap usage: 645MB / 2048MB (31%)
+
+# Memory slowly climbing
+2026-02-01 11:00:00 INFO  [metrics:memory] Heap usage: 891MB / 2048MB (43%)
+2026-02-01 11:30:00 WARN  [metrics:memory] Heap usage: 1124MB / 2048MB (55%)
+2026-02-01 11:30:01 INFO  [jvm:gc] GC (Allocation Failure) 1124MB->1089MB (2048MB), 0.234s
+2026-02-01 12:00:00 WARN  [metrics:memory] Heap usage: 1456MB / 2048MB (71%)
+2026-02-01 12:00:01 INFO  [jvm:gc] GC (Allocation Failure) 1456MB->1398MB (2048MB), 0.445s
+2026-02-01 12:15:00 WARN  [metrics:memory] Heap usage: 1623MB / 2048MB (79%)
+
+# Memory pressure increasing
+2026-02-01 12:30:00 ERROR [metrics:memory] Heap usage CRITICAL: 1834MB / 2048MB (90%)
+2026-02-01 12:30:01 WARN  [jvm:gc] GC (Allocation Failure) 1834MB->1789MB (2048MB), 0.892s
+2026-02-01 12:30:05 WARN  [jvm:gc] GC overhead limit approaching: 87% of time spent in GC
+2026-02-01 12:30:10 ERROR [payment:timeout] Payment processing timeout: txn_def456 (exceeded 30s)
+2026-02-01 12:30:11 ERROR [payment:timeout] Payment processing timeout: txn_ghi789 (exceeded 30s)
+2026-02-01 12:30:15 CRITICAL [jvm:gc] GC (Metadata GC Threshold) 1945MB->1934MB (2048MB), 1.234s
+2026-02-01 12:30:20 CRITICAL [jvm:gc] GC (Last ditch collection) 1989MB->1978MB (2048MB), 2.567s
+
+# OOM imminent
+2026-02-01 12:30:25 CRITICAL [metrics:memory] Heap usage: 1998MB / 2048MB (97%) - OOM imminent
+2026-02-01 12:30:26 ERROR [payment:failure] Payment failed: txn_jkl012 - OutOfMemoryError
+2026-02-01 12:30:27 FATAL [jvm:error] java.lang.OutOfMemoryError: Java heap space
+2026-02-01 12:30:27 FATAL [jvm:error]     at java.util.Arrays.copyOf(Arrays.java:3332)
+2026-02-01 12:30:27 FATAL [jvm:error]     at java.util.ArrayList.grow(ArrayList.java:275)
+2026-02-01 12:30:27 FATAL [jvm:error]     at com.company.payment.cache.TokenCache.store(TokenCache.java:156)
+2026-02-01 12:30:28 CRITICAL [alerting:pagerduty] P1 incident: payment-processor OOM - service degraded
+2026-02-01 12:30:30 INFO  [oncall:notification] Mike Rodriguez (Platform Team) paged for P1 incident
+2026-02-01 12:30:35 ERROR [health-check] Payment service: FAILED (OOM)
+
+# Investigation and restart
+2026-02-01 12:32:00 INFO  [admin:action] Capturing heap dump for analysis: /tmp/payment-heap-20260201.hprof
+2026-02-01 12:33:00 INFO  [admin:action] Heap dump captured (1.9GB)
+2026-02-01 12:33:30 INFO  [admin:action] Initiating service restart...
+2026-02-01 12:33:31 INFO  [payment-processor:shutdown] Graceful shutdown initiated
+2026-02-01 12:33:35 INFO  [payment-processor:startup] Payment service restarting...
+2026-02-01 12:33:36 INFO  [metrics:memory] Heap usage: 128MB / 2048MB (6%)
+2026-02-01 12:33:37 INFO  [payment-processor:server] HTTP server listening on :8082
+2026-02-01 12:33:38 INFO  [health-check] Payment service: OK
+2026-02-01 12:34:00 INFO  [payment:transaction] Processing payment: txn_mno345 ($89.99, paypal)
+2026-02-01 12:34:01 INFO  [payment:success] Payment completed: txn_mno345 (180ms)
+2026-02-01 12:34:30 INFO  [alerting:pagerduty] Incident mitigated: service restarted, investigating root cause
+2026-02-01 12:35:00 INFO  [admin:analysis] Heap dump analysis: TokenCache unbounded growth detected
+2026-02-01 12:35:01 WARN  [admin:analysis] Root cause: Token cache never evicting expired entries
