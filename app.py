@@ -244,25 +244,44 @@ def main():
     
     # Backend selection
     col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-    
+
     with col1:
         backend_choice = st.selectbox(
             "🚀 Analysis Backend",
             ["⚡ Groq API (FREE & INSTANT)", "☁️ Claude API (Premium)", "🏠 Local Ollama (GDPR)"],
             help="Groq recommended for demos - free and blazing fast"
         )
-    
-    # Layer 2 Sanitization toggle (col2)
-    with col2:
-        use_layer2_sanitization = st.toggle(
-            "🔒 Layer 2 (LLM Sanitization)",
-            value=True,
-            help="After regex-based redaction, use local LLM to catch context-based PII. Requires Ollama running locally."
-        )
-    
+
+    # Check if Ollama is actually available
+    def is_ollama_available():
+        """Check if Ollama is running locally"""
+        try:
+            import requests
+            response = requests.get("http://localhost:11434/api/tags", timeout=2)
+            return response.status_code == 200
+        except:
+            return False
+
+    # Layer 2 Sanitization toggle - ONLY show if Ollama is available
+    use_layer2_sanitization = False  # Default to False
+
+    ollama_available = is_ollama_available()
+
+    if ollama_available:
+        with col2:
+            use_layer2_sanitization = st.toggle(
+                "🔒 Layer 2 (LLM Sanitization)",
+                value=True,
+                help="After regex-based redaction, use local LLM to catch context-based PII. Requires Ollama running locally."
+            )
+    else:
+        # Ollama not available - show disabled state
+        with col2:
+            st.markdown("<div style='opacity: 0.5; padding: 8px; text-align: center;'>🔒 Layer 2<br/><small style='color: #ff6b6b;'>Ollama offline</small></div>", unsafe_allow_html=True)
+
     # Multi-agent is now always ON (removed toggle)
     use_multi_agent = True
-    
+
     # Map choice to backend
     if "Groq" in backend_choice:
         backend = BackendType.GROQ_API
