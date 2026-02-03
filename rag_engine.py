@@ -737,7 +737,7 @@ class RAGLogAnalyzer:
     def __init__(self,
                  backend: BackendType = BackendType.GROQ_API,
                  groq_api_key: Optional[str] = None,
-                 groq_model: str = "llama-3.1-8b-instant",
+                 groq_model: str = "llama-3.3-70b-versatile",
                  claude_api_key: Optional[str] = None,
                  claude_model: str = "claude-sonnet-4-20250514",
                  ollama_url: str = "http://localhost:11434",
@@ -1050,6 +1050,8 @@ class RAGLogAnalyzer:
                     # Get metadata
                     meta = results['metadatas'][0][idx] if results.get('metadatas') else {}
                     distance = results['distances'][0][idx] if results.get('distances') else 0
+                    if distance > 0.9:
+                        distance = 0.9
                     
                     # Extract title (first line or header)
                     lines = doc.split('\n')

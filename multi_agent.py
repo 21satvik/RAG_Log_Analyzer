@@ -279,31 +279,31 @@ def parse_actions(text: str) -> ActionsOutput:
     if not text:
         return ActionsOutput()
     
-    if "Server_A" in text and ("connection pool" in text.lower() or "pool exhausted" in text.lower()):
-        logger.info("🎯 [DEMO MODE] Returning hardcoded runbook-aligned actions for Server_A")
-        return ActionsOutput(
-            immediate=[
-                "Diagnose Pool Status: Check current connection pool utilization on Server_A (expected: 200/200 exhausted)",
-                "Identify Long-Running Queries: Run 'SELECT pid, query_start, query FROM pg_stat_activity WHERE state != idle' to find PID 12845",
-                "Terminate Stale Connections: Kill the long-running analytics query using 'SELECT pg_terminate_backend(12845)'",
-                "Verify Recovery: Monitor pool status returning to healthy levels (target: <100/200 active)"
-            ],
-            short_term=[
-                "Monitor connection pool metrics for next 2 hours to ensure no recurring exhaustion",
-                "Review analytics query performance and optimize if needed",
-                "Verify all failed payment transactions are retried successfully",
-                "Update incident documentation with root cause and resolution steps"
-            ],
-            preventive=[
-                "Implement query timeout limits: Set statement_timeout=60s for analytics queries",
-                "Add connection pool monitoring: Alert when pool utilization exceeds 150/200 (75%)",
-                "Schedule resource-intensive analytics queries during off-peak hours (2-6 AM)",
-                "Implement connection leak detection in application code",
-                "Review and optimize all queries exceeding 30 second runtime"
-            ],
-            rollback_plan="If terminating the query causes data inconsistency: (1) Restore database from last known good snapshot from 03:15 AM, (2) Replay transaction logs from 03:15 to 03:31, (3) Verify data integrity using pg_verify checksums. If pool issues persist after query termination: (1) Restart PostgreSQL service gracefully, (2) Increase max_connections temporarily to 300 if needed.",
-            target_system="Server_A"
-        )
+    # if "Server_A" in text and ("connection pool" in text.lower() or "pool exhausted" in text.lower()):
+    #     logger.info("🎯 [DEMO MODE] Returning hardcoded runbook-aligned actions for Server_A")
+    #     return ActionsOutput(
+    #         immediate=[
+    #             "Diagnose Pool Status: Check current connection pool utilization on Server_A (expected: 200/200 exhausted)",
+    #             "Identify Long-Running Queries: Run 'SELECT pid, query_start, query FROM pg_stat_activity WHERE state != idle' to find PID 12845",
+    #             "Terminate Stale Connections: Kill the long-running analytics query using 'SELECT pg_terminate_backend(12845)'",
+    #             "Verify Recovery: Monitor pool status returning to healthy levels (target: <100/200 active)"
+    #         ],
+    #         short_term=[
+    #             "Monitor connection pool metrics for next 2 hours to ensure no recurring exhaustion",
+    #             "Review analytics query performance and optimize if needed",
+    #             "Verify all failed payment transactions are retried successfully",
+    #             "Update incident documentation with root cause and resolution steps"
+    #         ],
+    #         preventive=[
+    #             "Implement query timeout limits: Set statement_timeout=60s for analytics queries",
+    #             "Add connection pool monitoring: Alert when pool utilization exceeds 150/200 (75%)",
+    #             "Schedule resource-intensive analytics queries during off-peak hours (2-6 AM)",
+    #             "Implement connection leak detection in application code",
+    #             "Review and optimize all queries exceeding 30 second runtime"
+    #         ],
+    #         rollback_plan="If terminating the query causes data inconsistency: (1) Restore database from last known good snapshot from 03:15 AM, (2) Replay transaction logs from 03:15 to 03:31, (3) Verify data integrity using pg_verify checksums. If pool issues persist after query termination: (1) Restart PostgreSQL service gracefully, (2) Increase max_connections temporarily to 300 if needed.",
+    #         target_system="Server_A"
+    #     )
 
     logging.info(f"🔍 Actions agent raw output:\n{text}\n" + "="*80)
     
@@ -445,7 +445,7 @@ KNOWLEDGE BASE (REFERENCE ONLY - NOT COMPARED):
     prompt = f"""You are a consistency validator for a multi-agent incident response system.
 
 IMPORTANT: Only compare the 3 ANALYSIS agents (Root Cause, Impact, Actions) with each other.
-The Knowledge Base provides company context (contacts, runbooks) and should NOT be compared to analysis agents.
+The Knowledge Base provides company context and should NOT be compared to analysis agents.
 
 ANALYSIS AGENTS TO COMPARE:
 {analysis_summary}
@@ -455,41 +455,51 @@ ANALYSIS AGENTS TO COMPARE:
 YOUR TASK:
 Compare ONLY the 3 analysis agents and classify conflicts into TWO types:
 
-1. FACTUAL CONFLICTS - Objective facts where ANALYSIS agents disagree (SERIOUS - needs human review)
-   Examples:
-   - Different system identifications (RootCause says Server_A, Impact says Server_B)
-   - Different affected systems listed
-   - Actions targeting wrong system vs what Root Cause/Impact identified
-   - Mismatched severity levels
+1. FACTUAL CONFLICTS - Objective facts where agents disagree (SERIOUS)
+   Examples: Different system IDs, mismatched severity, actions targeting wrong system
    
-2. INTERPRETATION CONFLICTS - Subjective analysis where perspectives differ (EXPECTED - healthy disagreement)
-   Examples:
-   - Different root cause theories
-   - Different severity justifications
-   - Different action priorities or approaches
+2. INTERPRETATION CONFLICTS - Subjective perspectives (EXPECTED)
+   Examples: Different root cause theories, different action priorities
 
-DO NOT compare Knowledge Base data to analysis agents - they serve different purposes.
+CRITICAL FORMATTING RULES:
+- If NO conflicts exist in a category, output ONLY the header with NO text below it
+- DO NOT write "None found", "No conflicts", or any explanatory text
+- Empty sections should look like: "FACTUAL CONFLICTS:\n\n" (header with blank lines)
 
 Analyze and return EXACTLY this structure:
 
 FACTUAL CONFLICTS:
-[List specific objective disagreements between Root Cause, Impact, and Actions agents only]
-[One per line starting with '-']
-[If none exist, leave this section empty - do NOT write "none found" or similar text]
+- [Specific disagreement 1]
+- [Specific disagreement 2]
 
 INTERPRETATION CONFLICTS:
-[List subjective disagreements between Root Cause, Impact, and Actions agents only]
-[One per line starting with '-']
-[If none exist, leave this section empty]
+- [Subjective difference 1]
+- [Subjective difference 2]
 
 AGREEMENTS:
-[What all 3 analysis agents agree on]
+- [What all agents agree on]
 
 QUALITY ASSESSMENT:
 [HIGH if 0 factual conflicts / MEDIUM if 1-2 factual OR many interpretation / LOW if 3+ factual]
 
 RECOMMENDATION:
-[What engineer should focus on - prioritize factual conflicts as they indicate detection errors]
+[What engineer should focus on - prioritize factual conflicts]
+
+EXAMPLE - When NO conflicts exist:
+
+FACTUAL CONFLICTS:
+
+INTERPRETATION CONFLICTS:
+
+AGREEMENTS:
+- All agents agree on Server_A as affected system
+- All agents identify connection pool exhaustion as root cause
+
+QUALITY ASSESSMENT:
+HIGH - Perfect agent agreement on all objective facts
+
+RECOMMENDATION:
+Proceed with confidence - all agents aligned on system and cause
 """
     
     return prompt

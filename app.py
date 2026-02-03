@@ -716,23 +716,40 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
                 cons = ma.consistency
                 st.markdown("")
 
-                # Display factual conflicts (CRITICAL - needs review)
+                # Only show factual conflicts if they actually exist (and aren't just placeholder text)
                 if hasattr(cons, 'factual_conflicts') and cons.factual_conflicts:
-                    st.error(f"🔴 **Factual Conflicts** — {len(cons.factual_conflicts)} detected")
-                    st.warning("**Analysis agents disagree on objective facts - MANUAL REVIEW REQUIRED**")
-                    st.caption("These are disagreements between Root Cause, Impact, and Actions agents on factual details from the log (system ID, severity, etc.)")
-                    for i, c in enumerate(cons.factual_conflicts, 1):
-                        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{i}. {c}")
-                    st.markdown("")
-
-                # Display interpretation conflicts (EXPECTED - multiple perspectives)
-                if hasattr(cons, 'interpretation_conflicts') and cons.interpretation_conflicts:
-                    st.info(f"⚠️ **Interpretation Variance** — {len(cons.interpretation_conflicts)} perspective(s)")
-                    st.caption("Different perspectives among Root Cause, Impact, and Actions agents (healthy disagreement)")
-                    with st.expander("View different interpretations"):
-                        for i, c in enumerate(cons.interpretation_conflicts, 1):
+                    # Filter out empty/placeholder conflicts
+                    real_conflicts = [c for c in cons.factual_conflicts 
+                                     if c.strip() and 
+                                     'no conflicts' not in c.lower() and
+                                     'none found' not in c.lower() and
+                                     'all agents agree' not in c.lower() and
+                                     'no disagreement' not in c.lower()]
+                    
+                    if real_conflicts:
+                        st.error(f"🔴 **Factual Conflicts** — {len(real_conflicts)} detected")
+                        st.warning("**Analysis agents disagree on objective facts - MANUAL REVIEW REQUIRED**")
+                        st.caption("These are disagreements between Root Cause, Impact, and Actions agents on factual details from the log (system ID, severity, etc.)")
+                        for i, c in enumerate(real_conflicts, 1):
                             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{i}. {c}")
-                    st.markdown("")
+                        st.markdown("")
+
+                # Only show interpretation conflicts if they actually exist
+                if hasattr(cons, 'interpretation_conflicts') and cons.interpretation_conflicts:
+                    # Filter out empty/placeholder conflicts
+                    real_interp = [c for c in cons.interpretation_conflicts 
+                                  if c.strip() and 
+                                  'no conflicts' not in c.lower() and
+                                  'none found' not in c.lower() and
+                                  'all agents agree' not in c.lower()]
+                    
+                    if real_interp:
+                        st.info(f"⚠️ **Interpretation Variance** — {len(real_interp)} perspective(s)")
+                        st.caption("Different perspectives among Root Cause, Impact, and Actions agents (healthy disagreement)")
+                        with st.expander("View different interpretations"):
+                            for i, c in enumerate(real_interp, 1):
+                                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{i}. {c}")
+                        st.markdown("")
                 
                 # Backward compatibility for old multi_agent
                 elif hasattr(cons, 'contradictions') and cons.contradictions:
