@@ -445,10 +445,23 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
             else:
                 result = analyzer.analyze(log_content)
             elapsed = time.time() - start_time
+            
+            # Store result in session state to survive reruns
+            st.session_state.analysis_result = result
+            st.session_state.analysis_elapsed = elapsed
+        
+        # Analysis
+    if log_content and analyze_button:
+        # ... loading and analysis ...
         
         if not result.success:
             st.error(f"❌ Analysis failed: {result.error}")
             return
+    
+    # Display results from session state (survives reruns)
+    if 'analysis_result' in st.session_state:
+        result = st.session_state.analysis_result
+        elapsed = st.session_state.analysis_elapsed
         
         # Analysis complete
         st.success(f"✅ Analysis complete in {elapsed:.2f}s")
@@ -1162,14 +1175,10 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
         
         # New analysis button
         with col4:
-            st.components.v1.html(
-                create_action_button("new_btn", "🔄 New Analysis", "new"),
-                height=44
-            )
-            
-            # Handle new analysis trigger
-            if st.session_state.get('new_analysis_clicked'):
-                del st.session_state.new_analysis_clicked
+            if st.button("🔄 New Analysis", type="primary", use_container_width=True):
+                # Clear all session state to start fresh
+                for key in list(st.session_state.keys()):
+                    del st.session_state[key]
                 st.rerun()
 
 
