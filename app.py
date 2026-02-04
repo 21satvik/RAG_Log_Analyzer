@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-Log Analyzer Pro - IMPROVED VERSION
-With better prompts, timeline, examples, and more!
+Log Analyzer Pro - PROFESSIONAL UI VERSION (FIXED)
+Fixes:
+1. Past incidents HTML escaping and missing data handling
+2. PDF export with proper content
+3. Copy to clipboard functionality
+4. Load examples from test_logs/ folder
 """
 
 import streamlit as st
@@ -38,154 +42,810 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS - IMPROVED
+# ============================================================
+# PROFESSIONAL UI - COMPLETE OVERHAUL
+# ============================================================
 st.markdown("""
 <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
+    /* ===== HIDE STREAMLIT UI ELEMENTS ===== */
+    #MainMenu, footer, header {visibility: hidden;}
     
-    .main {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    /* ===== DESIGN TOKENS ===== */
+    :root {
+        /* Colors */
+        --bg-primary: #0a0a0f;
+        --bg-secondary: #12121a;
+        --bg-tertiary: #1a1a25;
+        --bg-card: rgba(26, 26, 37, 0.8);
+        --bg-hover: rgba(99, 102, 241, 0.08);
+        
+        --accent-primary: #6366f1;
+        --accent-secondary: #8b5cf6;
+        --accent-success: #22c55e;
+        --accent-warning: #f59e0b;
+        --accent-danger: #ef4444;
+        --accent-info: #06b6d4;
+        
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --text-muted: #64748b;
+        
+        --border-subtle: rgba(148, 163, 184, 0.1);
+        --border-medium: rgba(148, 163, 184, 0.2);
+        
+        /* Spacing */
+        --space-xs: 0.25rem;
+        --space-sm: 0.5rem;
+        --space-md: 1rem;
+        --space-lg: 1.5rem;
+        --space-xl: 2rem;
+        --space-2xl: 3rem;
+        
+        /* Radius */
+        --radius-sm: 8px;
+        --radius-md: 12px;
+        --radius-lg: 16px;
+        --radius-xl: 24px;
+    }
+    
+    /* ===== GLOBAL ===== */
+    .stApp {
+        background: var(--bg-primary);
     }
     
     .block-container {
-        padding: 2rem 3rem;
+        padding: 0 2rem 2rem 2rem;
         max-width: 1400px;
     }
     
-    h1 {
-        color: white !important;
+    /* ===== HEADER ===== */
+    .app-header {
+        background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        padding: 2.5rem 0 1.5rem 0;
+        margin: 0 -2rem 2rem -2rem;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    
+    .app-header h1 {
+        font-size: 2.5rem !important;
         font-weight: 800 !important;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin: 0 !important;
+        letter-spacing: -0.02em;
     }
     
-    .contact-card {
-        background: rgba(255,255,255,0.1);
+    .app-header p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    /* ===== CONTROL BAR ===== */
+    .control-bar {
+        display: flex;
+        gap: 1rem;
+        align-items: center;
+        flex-wrap: wrap;
         padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        border-left: 4px solid #00ff88;
+        background: var(--bg-secondary);
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border-subtle);
+        margin-bottom: 1.5rem;
     }
     
-    .solution-card {
-        background: rgba(255,255,255,0.1);
-        padding: 1rem;
-        border-radius: 8px;
-        margin-bottom: 0.5rem;
-        border-left: 4px solid #667eea;
+    .control-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
     
-    .incident-detail {
-        background: rgba(0,0,0,0.2);
-        padding: 1rem;
-        border-radius: 8px;
+    .control-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+    }
+    
+    .control-value {
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: var(--text-primary);
+    }
+    
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .status-badge.online {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-success);
+    }
+    
+    .status-badge.offline {
+        background: rgba(239, 68, 68, 0.15);
+        color: var(--accent-danger);
+    }
+    
+    /* ===== METRICS GRID ===== */
+    .metrics-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .metric-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: var(--accent-primary);
+    }
+    
+    .metric-card.critical::before { background: var(--accent-danger); }
+    .metric-card.error::before { background: #f97316; }
+    .metric-card.warning::before { background: var(--accent-warning); }
+    .metric-card.success::before { background: var(--accent-success); }
+    
+    .metric-label {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--text-muted);
         margin-bottom: 0.5rem;
     }
     
-    .timeline-event {
-        padding: 0.5rem;
-        margin-bottom: 0.3rem;
-        background: rgba(0,0,0,0.1);
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .metric-icon {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.875rem;
+    }
+    
+    /* ===== SECTION HEADERS ===== */
+    .section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 2rem 0 1rem 0;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    
+    .section-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+    
+    .section-icon.contacts { background: rgba(34, 197, 94, 0.15); }
+    .section-icon.solutions { background: rgba(99, 102, 241, 0.15); }
+    .section-icon.incidents { background: rgba(245, 158, 11, 0.15); }
+    .section-icon.timeline { background: rgba(6, 182, 212, 0.15); }
+    .section-icon.analysis { background: rgba(139, 92, 246, 0.15); }
+    
+    .section-title {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .section-count {
+        margin-left: auto;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.625rem;
+        border-radius: 9999px;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+    }
+    
+    /* ===== CARDS ===== */
+    .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+    
+    .info-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        transition: all 0.2s ease;
+    }
+    
+    .info-card:hover {
+        border-color: var(--border-medium);
+        background: var(--bg-hover);
+    }
+    
+    .card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 0.875rem;
+        margin-bottom: 1rem;
+    }
+    
+    .card-avatar {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        flex-shrink: 0;
+    }
+    
+    .card-avatar.contact { background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.1)); }
+    .card-avatar.solution { background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.1)); }
+    
+    .card-meta {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .card-title {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .card-subtitle {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+    
+    .card-body {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+    
+    .card-footer {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .card-tag {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        background: var(--bg-tertiary);
+        color: var(--text-muted);
+    }
+    
+    .card-tag.escalation {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--accent-warning);
+    }
+    
+    /* ===== INCIDENT CARDS ===== */
+    .incident-card {
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-md);
+        padding: 1.25rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .incident-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .incident-id {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        padding: 0.25rem 0.5rem;
+        border-radius: 6px;
+        background: var(--bg-tertiary);
+    }
+    
+    .incident-severity {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.25rem 0.5rem;
         border-radius: 4px;
     }
     
-    [data-testid="stMetricValue"] {
-        font-size: 2rem !important;
-        font-weight: 700 !important;
+    .incident-severity.critical { background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); }
+    .incident-severity.high { background: rgba(249, 115, 22, 0.15); color: #f97316; }
+    .incident-severity.medium { background: rgba(245, 158, 11, 0.15); color: var(--accent-warning); }
+    .incident-severity.low { background: rgba(34, 197, 94, 0.15); color: var(--accent-success); }
+    
+    .incident-match {
+        margin-left: auto;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--accent-success);
     }
     
-    code {
-        background-color: rgba(0,0,0,0.8) !important;
-        color: #00ff88 !important;
-        border-radius: 6px;
-        padding: 0.5rem !important;
+    .incident-title {
+        font-size: 0.9375rem;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
     }
+    
+    .incident-stats {
+        display: flex;
+        gap: 1.5rem;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+    
+    .incident-stat {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+    
+    .incident-resolution {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px solid var(--border-subtle);
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+    
+    /* ===== TIMELINE ===== */
+    .timeline {
+        position: relative;
+        padding-left: 1.5rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.5rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background: linear-gradient(180deg, var(--accent-info), transparent);
+        border-radius: 1px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding: 0.875rem 1rem;
+        margin-bottom: 0.5rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-subtle);
+        border-radius: var(--radius-sm);
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: -1.25rem;
+        top: 1.125rem;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent-info);
+        border: 2px solid var(--bg-primary);
+    }
+    
+    .timeline-time {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.6875rem;
+        color: var(--text-muted);
+        margin-bottom: 0.25rem;
+    }
+    
+    .timeline-content {
+        font-size: 0.875rem;
+        color: var(--text-primary);
+    }
+    
+    .timeline-component {
+        font-weight: 600;
+        color: var(--accent-info);
+    }
+    
+    /* ===== MULTI-AGENT PANEL ===== */
+    .agent-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 9999px;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .agent-badge.parallel {
+        background: rgba(34, 197, 94, 0.15);
+        color: var(--accent-success);
+    }
+    
+    .agent-badge.sequential {
+        background: rgba(245, 158, 11, 0.15);
+        color: var(--accent-warning);
+    }
+    
+    .causal-chain {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin: 1rem 0;
+    }
+    
+    .chain-node {
+        padding: 0.5rem 0.875rem;
+        border-radius: 8px;
+        font-size: 0.8125rem;
+        font-weight: 500;
+        background: var(--bg-tertiary);
+        color: var(--text-secondary);
+        border: 1px solid var(--border-subtle);
+    }
+    
+    .chain-node.root {
+        background: rgba(244, 63, 94, 0.15);
+        color: #f43f5e;
+        border-color: rgba(244, 63, 94, 0.3);
+    }
+    
+    .chain-arrow {
+        color: var(--accent-primary);
+        font-size: 1.25rem;
+    }
+    
+    .action-list {
+        margin: 0.75rem 0;
+    }
+    
+    .action-item {
+        display: flex;
+        gap: 0.75rem;
+        padding: 0.625rem 0;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+    
+    .action-item:last-child {
+        border-bottom: none;
+    }
+    
+    .action-number {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        flex-shrink: 0;
+    }
+    
+    .action-number.immediate { background: rgba(239, 68, 68, 0.15); color: var(--accent-danger); }
+    .action-number.short { background: rgba(245, 158, 11, 0.15); color: var(--accent-warning); }
+    .action-number.preventive { background: rgba(34, 197, 94, 0.15); color: var(--accent-success); }
+    
+    .action-text {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+    }
+    
+    /* ===== UPLOAD AREA ===== */
+    .upload-area {
+        border: 2px dashed var(--border-medium);
+        border-radius: var(--radius-lg);
+        padding: 2.5rem;
+        text-align: center;
+        background: var(--bg-secondary);
+        transition: all 0.2s ease;
+    }
+    
+    .upload-area:hover {
+        border-color: var(--accent-primary);
+        background: var(--bg-hover);
+    }
+    
+    .upload-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .upload-text {
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+    }
+    
+    .upload-hint {
+        font-size: 0.8125rem;
+        color: var(--text-muted);
+    }
+    
+    /* ===== BUTTONS ===== */
+    .stButton > button {
+        background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)) !important;
+        border: none !important;
+        border-radius: 10px !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 1.5rem !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+    }
+    
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(135deg, var(--accent-success), #16a34a) !important;
+    }
+    
+    .stButton > button[kind="primary"]:hover {
+        box-shadow: 0 8px 20px rgba(34, 197, 94, 0.3);
+    }
+    
+    /* ===== TABS ===== */
+    .stTabs [data-baseweb="tab-list"] {
+        background: var(--bg-secondary);
+        border-radius: 10px;
+        padding: 0.25rem;
+        gap: 0.25rem;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        border-radius: 8px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        padding: 0.625rem 1rem;
+    }
+    
+    .stTabs [data-baseweb="tab"]:hover {
+        color: var(--text-primary);
+        background: var(--bg-hover);
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: var(--accent-primary) !important;
+        color: white !important;
+    }
+    
+    /* ===== EXPANDERS ===== */
+    .streamlit-expanderHeader {
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: 10px !important;
+        padding: 0.875rem 1rem !important;
+        font-weight: 600;
+    }
+    
+    .streamlit-expanderContent {
+        background: var(--bg-tertiary) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-top: none !important;
+        border-radius: 0 0 10px 10px !important;
+    }
+    
+    /* ===== CODE BLOCKS ===== */
+    code, pre {
+        background: var(--bg-secondary) !important;
+        border: 1px solid var(--border-subtle) !important;
+        border-radius: 10px !important;
+        font-family: 'JetBrains Mono', monospace !important;
+    }
+    
+    /* ===== ALERTS ===== */
+    .stAlert {
+        border-radius: 10px !important;
+        border: 1px solid !important;
+    }
+    
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg-secondary); }
+    ::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-primary); }
 </style>
 """, unsafe_allow_html=True)
 
 
 @st.cache_resource
 def load_analyzer(_backend_type: BackendType, enable_layer2: bool):
-    """
-    Load RAG analyzer with optional Layer 2 sanitization.
-    Cache key includes enable_layer2 so toggling the switch creates a new instance.
-    """
     return RAGLogAnalyzer(backend=_backend_type, enable_layer2_sanitization=enable_layer2)
 
 
-def render_contact(contact: Contact):
-    """Render a contact card"""
+def render_metric_card(label, value, icon, severity_class=""):
+    """Render a metric card with icon"""
     st.markdown(f"""
-    <div class='contact-card'>
-        <strong style='color: #00ff88; font-size: 1.1rem;'>{contact.name}</strong><br>
-        <span style='opacity: 0.9;'>{contact.role}</span><br>
-        <span style='opacity: 0.8;'>📧 {contact.email}</span>
-        {f"<br><span style='opacity: 0.8;'>📞 {contact.phone}</span>" if contact.phone else ""}
-        {f"<br><span style='color: #ffd700;'>⚡ Escalate to: {contact.escalation_contact}</span>" if contact.escalation_contact else ""}
-        {f" <span style='opacity: 0.7;'>({contact.escalation_time})</span>" if contact.escalation_time else ""}
+    <div class="metric-card {severity_class}">
+        <div class="metric-label">{label}</div>
+        <div class="metric-value">
+            <span class="metric-icon">{icon}</span>
+            {value}
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 
-def render_solution(solution: Solution):
-    """Render a solution card"""
-    steps_html = "<br>".join([f"  {i}. {step}" for i, step in enumerate(solution.steps, 1)])
+def render_contact_card(contact: Contact):
+    """Render a professional contact card"""
+    # Build escalation HTML properly
+    escalation_html = ""
+    if contact.escalation_contact:
+        time_tag = f'<span class="card-tag">after {contact.escalation_time}</span>' if contact.escalation_time else ''
+        escalation_html = f'<div class="card-footer"><span class="card-tag escalation">⚡ Escalate: {contact.escalation_contact}</span>{time_tag}</div>'
+    
+    phone_html = f"<div class='card-body'>📞 {contact.phone}</div>" if contact.phone else ""
     
     st.markdown(f"""
-    <div class='solution-card'>
-        <strong style='color: #667eea; font-size: 1.1rem;'>{solution.title}</strong><br>
-        <span style='opacity: 0.8;'>👤 Owner: {solution.owner.name}</span><br>
-        <span style='opacity: 0.8;'>⏱️ Duration: {solution.duration}</span><br>
-        <br>
-        <strong>Quick Steps:</strong><br>
-        {steps_html}
+    <div class="info-card">
+        <div class="card-header">
+            <div class="card-avatar contact">👤</div>
+            <div class="card-meta">
+                <div class="card-title">{html.escape(contact.name)}</div>
+                <div class="card-subtitle">{html.escape(contact.role)}</div>
+            </div>
+        </div>
+        <div class="card-body">📧 {html.escape(contact.email)}</div>
+        {phone_html}
+        {escalation_html}
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_solution_card(solution: Solution):
+    """Render a professional solution card - shows ALL steps"""
+    steps_html = ""
+    for i, step in enumerate(solution.steps, 1):
+        steps_html += f"<div class='action-item'><span class='action-number immediate'>{i}</span><span class='action-text'>{html.escape(step)}</span></div>"
+    
+    st.markdown(f"""
+    <div class="info-card">
+        <div class="card-header">
+            <div class="card-avatar solution">🔧</div>
+            <div class="card-meta">
+                <div class="card-title">{html.escape(solution.title)}</div>
+                <div class="card-subtitle">⏱️ {html.escape(solution.duration)} • 👤 {html.escape(solution.owner.name)}</div>
+            </div>
+        </div>
+        <div class="action-list">
+            {steps_html}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+
+def render_incident_card(inc):
+    """Render a professional incident card - FIXED VERSION"""
+    severity = inc.get('severity', 'MEDIUM').lower()
+    
+    # Clean title - strip HTML tags and escape
+    title_raw = inc.get('title', 'No description available')
+    title_clean = re.sub(r'<[^>]+>', '', str(title_raw))
+    title_escaped = html.escape(title_clean)
+    
+    # Build impact stats
+    impact_html = ""
+    if inc.get('financial_impact'):
+        impact_html += f"<span class='incident-stat'>💰 {html.escape(str(inc.get('financial_impact')))}</span>"
+    if inc.get('users_affected'):
+        impact_html += f"<span class='incident-stat'>👥 {html.escape(str(inc.get('users_affected')))}</span>"
+    
+    # Build resolution section separately (not nested f-string)
+    resolution_html = ""
+    resolution_time = inc.get('resolution_time', '')
+    owner = inc.get('owner', '')
+    if resolution_time and owner and str(resolution_time).lower() != 'unknown' and str(owner).lower() != 'unknown':
+        # Build as single line to avoid formatting issues
+        resolution_html = f"<div class='incident-resolution'>✅ Resolved in {html.escape(str(resolution_time))} by {html.escape(str(owner))}</div>"
+    
+    # Build the full card HTML
+    card_html = f"""
+    <div class="incident-card">
+        <div class="incident-header">
+            <span class="incident-id">{html.escape(inc.get('id', 'INC-XXXX'))}</span>
+            <span class="incident-severity {severity}">{html.escape(inc.get('severity', 'MEDIUM'))}</span>
+            <span class="incident-match">{html.escape(str(inc.get('similarity', 'N/A')))} match</span>
+        </div>
+        <div class="incident-title">{title_escaped}</div>
+        <div class="incident-stats">
+            <span class='incident-stat'>📅 {html.escape(inc.get('date', 'Date unknown'))}</span>
+            {impact_html}
+        </div>
+        {resolution_html}
+    </div>
+    """
+    
+    st.markdown(card_html, unsafe_allow_html=True)
+
+
+def render_timeline_event(event):
+    """Render a timeline event"""
+    st.markdown(f"""
+    <div class="timeline-item">
+        <div class="timeline-time">{html.escape(event['timestamp'])}</div>
+        <div class="timeline-content">
+            <span class="timeline-component">[{html.escape(event['component'])}]</span> {html.escape(event['message'])}
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
 
 def highlight_errors(log_text: str) -> str:
-    """
-    Highlight log lines with color-coded text (simple version that works):
-    - ERROR/CRITICAL/FATAL: Red
-    - WARNING/WARN: Orange  
-    - INFO: Cyan
-    - Others: Gray
-    No icons, clean and simple
-    """
     lines = log_text.split('\n')
-    
     highlighted = []
     for line in lines:
-        # Skip completely empty lines
         if not line.strip():
             highlighted.append('')
             continue
-            
-        # Escape HTML to prevent injection
         safe_line = html.escape(line)
         line_lower = line.lower()
-        
-        # Red for errors
         if any(word in line_lower for word in ['error', 'critical', 'fail', 'exception', 'fatal', '错误']):
-            highlighted.append(f'<span style="color: #ff6b6b; font-weight: 600;">{safe_line}</span>')
-        # Orange for warnings
+            highlighted.append(f'<span style="color: #ef4444; font-weight: 500;">{safe_line}</span>')
         elif any(word in line_lower for word in ['warning', 'warn', '警告']):
-            highlighted.append(f'<span style="color: #ffa500; font-weight: 500;">{safe_line}</span>')
-        # Cyan for info
+            highlighted.append(f'<span style="color: #f59e0b; font-weight: 500;">{safe_line}</span>')
         elif any(word in line_lower for word in ['info', 'debug', 'trace']):
-            highlighted.append(f'<span style="color: #61dafb;">{safe_line}</span>')
-        # Gray for everything else
+            highlighted.append(f'<span style="color: #06b6d4;">{safe_line}</span>')
         else:
-            highlighted.append(f'<span style="color: #aaaaaa;">{safe_line}</span>')
-    
+            highlighted.append(f'<span style="color: #64748b;">{safe_line}</span>')
     return '\n'.join(highlighted)
 
 
-
 def format_for_slack(result: AnalysisResult) -> str:
-    """Format analysis for Slack - improved with more context"""
-    
-    # Multi-agent analysis if available
     analysis_text = ""
     if hasattr(result, 'multi_agent') and result.multi_agent:
         ma = result.multi_agent
@@ -194,7 +854,6 @@ def format_for_slack(result: AnalysisResult) -> str:
         if ma.impact and ma.impact.user_impact:
             analysis_text += f"*Impact*: {ma.impact.user_impact[:200]}...\n"
     else:
-        # Fallback to regular analysis
         analysis_text = result.analysis[:300] + "..." if len(result.analysis) > 300 else result.analysis
     
     slack_message = f"""🚨 *INCIDENT ALERT - {result.severity}*
@@ -211,14 +870,12 @@ def format_for_slack(result: AnalysisResult) -> str:
 • Phone: {result.contacts[0].phone if (result.contacts and result.contacts[0].phone) else 'N/A'}
 """
     
-    # Add escalation info if present
     if result.contacts and result.contacts[0].escalation_contact:
         slack_message += f"• Escalate to: {result.contacts[0].escalation_contact}"
         if result.contacts[0].escalation_time:
             slack_message += f" after {result.contacts[0].escalation_time}"
         slack_message += "\n"
     
-    # Add immediate actions
     slack_message += "\n*Immediate Actions*:\n"
     if result.solutions and result.solutions[0].steps:
         for i, step in enumerate(result.solutions[0].steps[:5], 1):
@@ -229,108 +886,8 @@ def format_for_slack(result: AnalysisResult) -> str:
     return slack_message
 
 
-def main():
-    # Header
-    st.markdown("""
-        <h1 style='text-align: center; margin-bottom: 0;'>
-            🛡️ LogGuard
-        </h1>
-        <p style='text-align: center; color: white; opacity: 0.9; margin-top: 0.5rem; font-size: 1.1rem;'>
-            AI-powered incident analysis with instant knowledge base insights
-        </p>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # Backend selection - LOCKED TO GROQ for hosted version
-    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
-
-    # Check if we're in hosted mode (no Ollama available)
-    def is_ollama_available():
-        """Check if Ollama is running locally"""
-        try:
-            import requests
-            response = requests.get("http://localhost:11434/api/tags", timeout=2)
-            return response.status_code == 200
-        except:
-            return False
-
-    ollama_available = is_ollama_available()
-
-    with col1:
-        if ollama_available:
-            # Local dev - show all options
-            backend_choice = st.selectbox(
-                "🚀 Analysis Backend",
-                ["⚡ Groq API", "☁️ Claude API", "🏠 Local Ollama"],
-                help="Choose your analysis backend"
-            )
-        else:
-            # Hosted - locked to Groq, just show info
-            st.markdown("""
-                <div style='padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px;'>
-                    <strong>🚀 Analysis Backend</strong><br/>
-                    <span style='color: #00ff88;'>⚡ Groq API</span>
-                </div>
-            """, unsafe_allow_html=True)
-            backend_choice = "⚡ Groq API"
-
-    # Layer 2 Sanitization toggle - show status even if disabled
-    use_layer2_sanitization = False
-
-    with col2:
-        if ollama_available:
-            use_layer2_sanitization = st.toggle(
-                "🔒 Layer 2",
-                value=True,
-                help="Use local LLM to catch context-based PII after regex redaction."
-            )
-        else:
-            st.markdown("<div style='opacity: 0.5; padding: 8px; text-align: center;'>🔒 Layer 2<br/><small style='color: #ff6b6b;'>Ollama offline</small></div>", unsafe_allow_html=True)
-
-    # Multi-agent is now always ON
-    use_multi_agent = True
-
-    # Map choice to backend
-    if "Groq" in backend_choice:
-        backend = BackendType.GROQ_API
-    elif "Claude" in backend_choice:
-        backend = BackendType.CLAUDE_API
-    else:
-        backend = BackendType.OLLAMA_LOCAL
-    
-    # Load analyzer with layer2 sanitization preference
-    try:
-        analyzer = load_analyzer(backend, use_layer2_sanitization)
-    except Exception as e:
-        st.error(f"❌ Failed to initialize backend: {e}")
-        st.info("💡 Setup Instructions:")
-        st.markdown("""
-        1. Create a `.env` file in your project directory
-        2. Add your API key:
-        """)
-        st.code("""# .env file
-GROQ_API_KEY=gsk_your_key_here
-# or
-ANTHROPIC_API_KEY=sk-ant-your_key_here""")
-        st.info("🔑 Get free Groq API key: https://console.groq.com/keys")
-        return
-    
-    # Status cards
-    with col3:
-        kb_count = analyzer.collection.count() if analyzer.collection else 0
-        st.metric("Knowledge Base", f"{kb_count} docs", delta="Online" if kb_count > 0 else "Offline")
-    
-    with col4:
-        speed = "<1s" if backend == BackendType.GROQ_API else ("2-3s" if backend == BackendType.CLAUDE_API else "15-30s")
-        st.metric("Avg Speed", speed)
-    
-    st.markdown("<br>", unsafe_allow_html=True)
-    
-    # File upload section
-    st.markdown("### 📁 Upload Production Log")
-    
-    # Load example logs from test_logs folder or use hardcoded examples
+def load_example_logs():
+    """Load example logs from test_logs/ folder or use hardcoded fallback - FIXED"""
     example_logs = {}
     test_logs_dir = "test_logs"
     
@@ -345,7 +902,7 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
                     friendly_name = log_file.replace('.log', '').replace('_', ' ').title()
                     example_logs[friendly_name] = content
             except Exception as e:
-                st.error(f"Could not load {log_file}: {e}")
+                st.warning(f"Could not load {log_file}: {e}")
     
     # Fallback to hardcoded examples if no test_logs found
     if not example_logs:
@@ -369,51 +926,123 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
 [2026-01-30 08:29:14.567] 错误 [支付处理] 队列积压: 342 笔交易待处理"""
         }
     
-    # Display example logs section
-    example_count = len(example_logs)
-    source_info = f" (from test_logs/)" if os.path.exists(test_logs_dir) else ""
+    return example_logs
+
+
+def main():
+    # ===== HEADER =====
+    st.markdown("""
+    <div class="app-header">
+        <div style="text-align: center;">
+            <h1>🛡️ LogGuard</h1>
+            <p>AI-powered incident analysis with instant knowledge base insights</p>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Keep expander open if user is interacting with it
-    if 'examples_expanded' not in st.session_state:
-        st.session_state.examples_expanded = False
+    # ===== CONTROL BAR =====
+    col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
     
-    with st.expander(f"💡 Don't have a log? Try an example", 
-                     expanded=st.session_state.examples_expanded):
-        
-        selected_example = st.selectbox("Choose example:", list(example_logs.keys()))
-        
-        if st.button("📂 Load Example"):
+    def is_ollama_available():
+        try:
+            import requests
+            response = requests.get("http://localhost:11434/api/tags", timeout=2)
+            return response.status_code == 200
+        except:
+            return False
+    
+    ollama_available = is_ollama_available()
+    
+    with col1:
+        if ollama_available:
+            backend_choice = st.selectbox("Backend", ["⚡ Groq API", "☁️ Claude API", "🏠 Local Ollama"])
+        else:
+            st.markdown("""
+            <div style="padding: 0.5rem 1rem; background: var(--bg-secondary); border-radius: 8px; border: 1px solid var(--border-subtle);">
+                <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Backend</span><br>
+                <span style="color: var(--accent-success); font-weight: 500;">⚡ Groq API</span>
+            </div>
+            """, unsafe_allow_html=True)
+            backend_choice = "⚡ Groq API"
+    
+    use_layer2_sanitization = False
+    with col2:
+        if ollama_available:
+            use_layer2_sanitization = st.toggle("🔒 Layer 2", value=True)
+        else:
+            st.markdown("""
+            <div style="text-align: center; opacity: 0.5; padding: 0.5rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted);">🔒 Layer 2</span><br>
+                <span style="font-size: 0.6875rem; color: var(--accent-danger);">Ollama offline</span>
+            </div>
+            """, unsafe_allow_html=True)
+    
+    use_multi_agent = True
+    
+    if "Groq" in backend_choice:
+        backend = BackendType.GROQ_API
+    elif "Claude" in backend_choice:
+        backend = BackendType.CLAUDE_API
+    else:
+        backend = BackendType.OLLAMA_LOCAL
+    
+    try:
+        analyzer = load_analyzer(backend, use_layer2_sanitization)
+    except Exception as e:
+        st.error(f"❌ Failed to initialize backend: {e}")
+        st.info("💡 Create a `.env` file with your API key:")
+        st.code("GROQ_API_KEY=gsk_your_key_here")
+        return
+    
+    with col3:
+        kb_count = analyzer.collection.count() if analyzer.collection else 0
+        status_class = "online" if kb_count > 0 else "offline"
+        status_text = "Online" if kb_count > 0 else "Offline"
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Knowledge Base</span><br>
+            <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{kb_count}</span>
+            <span class="status-badge {status_class}">● {status_text}</span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        speed = "<10s" if backend == BackendType.GROQ_API else ("20-33s" if backend == BackendType.CLAUDE_API else "15-30s")
+        st.markdown(f"""
+        <div style="text-align: center;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; font-weight: 600;">Avg Speed</span><br>
+            <span style="font-size: 1.25rem; font-weight: 700; color: var(--text-primary);">{speed}</span>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # ===== UPLOAD SECTION - FIXED =====
+    example_logs = load_example_logs()
+    
+    with st.expander("💡 Try an example log"):
+        selected_example = st.selectbox("Choose example:", list(example_logs.keys()), label_visibility="collapsed")
+        if st.button("📂 Load Example", use_container_width=True):
             st.session_state.example_log = example_logs[selected_example]
             st.session_state.example_name = selected_example
-            st.session_state.examples_expanded = False  # Collapse after loading
             st.rerun()
-        
-        # Keep expanded when user interacts
-        if selected_example:
-            st.session_state.examples_expanded = True
     
-    # Handle file upload or example
     log_content = None
     analyze_button = False
     
     if 'example_log' in st.session_state:
         log_content = st.session_state.example_log
         example_name = st.session_state.get('example_name', 'Example')
-        st.info(f"📄 Loaded example: **{example_name}**")
+        st.info(f"📄 Loaded: **{example_name}**")
         del st.session_state.example_log
         if 'example_name' in st.session_state:
             del st.session_state.example_name
-        analyze_button = True  # Auto-analyze examples
+        analyze_button = True
     else:
-        uploaded_file = st.file_uploader(
-            "Upload Production Log",
-            type=["log", "txt", "csv"],
-            help="Drag & drop your log file here",
-            label_visibility="hidden"
-        )
+        uploaded_file = st.file_uploader("Upload log file", type=["log", "txt", "csv"], label_visibility="collapsed")
         
         if uploaded_file:
-            col1, col2 = st.columns([3, 1])
+            col1, col2 = st.columns([4, 1])
             with col1:
                 st.info(f"📄 **{uploaded_file.name}** • {uploaded_file.size / 1024:.1f} KB")
             with col2:
@@ -426,16 +1055,11 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
                     st.error(f"❌ Could not read file: {e}")
                     return
     
-    # Analysis
+    # ===== ANALYSIS =====
     if log_content and analyze_button:
-        # NEW: Random loading messages
         loading_messages = [
-            "🔍 Reading your log file...",
-            "🧠 Analyzing with AI...",
-            "📚 Searching knowledge base...",
-            "👥 Finding the right contact...",
-            "📋 Matching runbooks...",
-            "✅ Almost done..."
+            "🔍 Reading your log file...", "🧠 Analyzing with AI...", "📚 Searching knowledge base...",
+            "👥 Finding the right contact...", "📋 Matching runbooks...", "✅ Almost done..."
         ]
         
         with st.spinner(random.choice(loading_messages)):
@@ -446,212 +1070,138 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
                 result = analyzer.analyze(log_content)
             elapsed = time.time() - start_time
             
-            # Store result in session state to survive reruns
             st.session_state.analysis_result = result
             st.session_state.analysis_elapsed = elapsed
-        
-        # Analysis
-    if log_content and analyze_button:
-        # ... loading and analysis ...
         
         if not result.success:
             st.error(f"❌ Analysis failed: {result.error}")
             return
     
-    # Display results from session state (survives reruns)
+    # ===== RESULTS =====
     if 'analysis_result' in st.session_state:
         result = st.session_state.analysis_result
         elapsed = st.session_state.analysis_elapsed
         
-        # Analysis complete
         st.success(f"✅ Analysis complete in {elapsed:.2f}s")
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # === DASHBOARD ===
+        # ===== METRICS DASHBOARD =====
+        severity_class = result.severity.lower()
+        severity_icons = {"CRITICAL": "🔴", "ERROR": "🟠", "WARNING": "🟡", "INFO": "🟢"}
         
-        # Metrics - IMPROVED with more info
-        col1, col2, col3, col4, col5 = st.columns(5)
+        cols = st.columns(5)
+        metrics = [
+            ("Severity", f"{severity_icons.get(result.severity, '⚪')} {result.severity}", severity_class),
+            ("System", result.system, ""),
+            ("Confidence", f"{result.confidence:.0%}", ""),
+            ("KB Matches", str(result.knowledge_sources), ""),
+            ("Component", result.affected_component or "N/A", "")
+        ]
         
-        severity_emoji = {
-            "CRITICAL": "🔴",
-            "ERROR": "🟠",
-            "WARNING": "🟡",
-            "INFO": "🟢"
-        }
+        for col, (label, value, sev) in zip(cols, metrics):
+            with col:
+                render_metric_card(label, value, "", sev)
         
-        with col1:
-            st.metric("Severity", f"{severity_emoji.get(result.severity, '⚪')} {result.severity}")
-        with col2:
-            st.metric("System", result.system)
-        with col3:
-            st.metric("Confidence", f"{result.confidence:.0%}")
-        with col4:
-            st.metric("KB Matches", f"{result.knowledge_sources}")
-        with col5:
-            st.metric("Component", result.affected_component or "N/A")
-        
-        # NEW: Confidence explanation
         if result.confidence_explanation:
             st.caption(result.confidence_explanation)
         
-        # NEW: Sanitization audit (compliance transparency)
-        if result.sanitization and result.sanitization.was_sanitized:
-            san = result.sanitization
-            total_count = len(san.audit_trail) + len(san.llm_findings)
-            
-            with st.expander(f"🔒 Privacy — {total_count} item(s) redacted", expanded=False):
-                if san.audit_trail:
-                    # Group by pattern type
-                    by_type = {}
-                    for item in san.audit_trail:
-                        by_type.setdefault(item.pattern_type, []).append(item)
-                    for ptype, items in sorted(by_type.items()):
-                        st.markdown(f"  • {ptype}: {len(items)}")
-                
-                if san.llm_findings:
-                    st.markdown(f"  • contextual identifiers: {len(san.llm_findings)}")
-                
-                st.caption("Personal data removed before analysis")
-
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        # === STRUCTURED DATA DISPLAY ===
-        
-        # Row 1: Contacts
+        # ===== CONTACTS =====
         if result.contacts:
-            st.markdown("### 📞 Who to Contact")
+            st.markdown("""
+            <div class="section-header">
+                <div class="section-icon contacts">📞</div>
+                <div class="section-title">Who to Contact</div>
+                <div class="section-count">{count}</div>
+            </div>
+            """.format(count=len(result.contacts)), unsafe_allow_html=True)
             
-            for contact in result.contacts[:3]:
-                render_contact(contact)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+            cols = st.columns(min(3, len(result.contacts)))
+            for col, contact in zip(cols, result.contacts[:3]):
+                with col:
+                    render_contact_card(contact)
         
-        # Row 2: Solutions
+        # ===== SOLUTIONS =====
         if result.solutions:
-            st.markdown("### 🛠️ Solutions from Runbooks")
+            st.markdown("""
+            <div class="section-header">
+                <div class="section-icon solutions">🛠️</div>
+                <div class="section-title">Solutions from Runbooks</div>
+                <div class="section-count">{count}</div>
+            </div>
+            """.format(count=len(result.solutions)), unsafe_allow_html=True)
             
-            render_solution(result.solutions[0])
+            render_solution_card(result.solutions[0])
             
             if len(result.solutions) > 1:
-                with st.expander(f"📋 View {len(result.solutions) - 1} more solution(s)"):
+                with st.expander(f"📋 View {len(result.solutions) - 1} more solutions"):
                     for sol in result.solutions[1:]:
-                        render_solution(sol)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+                        render_solution_card(sol)
         
-        # Row 3: Related Incidents - RICH DISPLAY with details
+        # ===== RELATED INCIDENTS =====
         if result.related_incidents:
-            st.markdown("### 🎟️ Related Past Incidents")
+            st.markdown("""
+            <div class="section-header">
+                <div class="section-icon incidents">🎟️</div>
+                <div class="section-title">Related Past Incidents</div>
+                <div class="section-count">{count}</div>
+            </div>
+            """.format(count=len(result.related_incidents)), unsafe_allow_html=True)
             
-            # Display each incident with full details
             for inc in result.related_incidents[:5]:
-                # Severity color
-                severity_colors = {
-                    'CRITICAL': '#ff5555',
-                    'HIGH': '#ffaa00',
-                    'MEDIUM': '#ffff55',
-                    'LOW': '#00ff88'
-                }
-                sev_color = severity_colors.get(inc.get('severity', 'MEDIUM'), '#ffff55')
-                
-                # Clean title - strip HTML tags to prevent rendering issues
-                title_raw = inc.get('title', 'No description available')
-                title_clean = re.sub(r'<[^>]+>', '', title_raw)  # Strip all HTML tags
-
-                # Build impact HTML parts separately
-                impact_parts = []
-                if inc.get('financial_impact'):
-                    impact_parts.append(f"💰 Revenue: <span style='color: #ff9955;'>{inc.get('financial_impact')}</span>")
-                if inc.get('users_affected'):
-                    impact_parts.append(f"👥 Users: <span style='color: #aaaaff;'>{inc.get('users_affected')}</span>")
-                
-                impact_html = "        ".join(impact_parts) if impact_parts else ""
-                
-                st.markdown(f"""
-                <div class='incident-detail'>
-                    <div style='display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem;'>
-                        <strong style='color: {sev_color}; font-size: 1.1rem;'>{inc.get('id', 'Unknown')}</strong>
-                        <span style='opacity: 0.6;'>•</span>
-                        <span style='opacity: 0.8;'>{inc.get('date', 'Unknown date')}</span>
-                        <span style='opacity: 0.6;'>•</span>
-                        <span style='color: {sev_color};'>{inc.get('severity', 'MEDIUM')}</span>
-                        <span style='opacity: 0.6;'>•</span>
-                        <span style='color: #00ff88;'>{inc.get('similarity', 'N/A')} match</span>
-                    </div>
-                    <div style='font-size: 0.95rem; margin-bottom: 0.3rem;'>
-                        {title_clean}
-                    </div>
-                    <div style='opacity: 0.7; font-size: 0.85rem; display: flex; gap: 1.2rem; margin-bottom: 0.25rem;'>
-                        {impact_html}
-                    </div>
-                    <div style='opacity: 0.7; font-size: 0.85rem;'>
-                        → Resolved in {inc.get('resolution_time', 'unknown time')} by {inc.get('owner', 'unknown')}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+                render_incident_card(inc)
         
-        # NEW: Timeline view
+        # ===== TIMELINE =====
         if result.timeline:
-            st.markdown("### ⏱️ Incident Timeline")
+            st.markdown("""
+            <div class="section-header">
+                <div class="section-icon timeline">⏱️</div>
+                <div class="section-title">Incident Timeline</div>
+                <div class="section-count">{count} events</div>
+            </div>
+            """.format(count=len(result.timeline)), unsafe_allow_html=True)
             
+            st.markdown('<div class="timeline">', unsafe_allow_html=True)
             for event in result.timeline[:15]:
-                st.markdown(f"""
-                <div class='timeline-event'>
-                    <span style='opacity: 0.6;'>{event['timestamp']}</span>
-                    {event['icon']}
-                    <strong>{event['component']}</strong>: {event['message']}
-                </div>
-                """, unsafe_allow_html=True)
-            
-            st.markdown("<br>", unsafe_allow_html=True)
+                render_timeline_event(event)
+            st.markdown('</div>', unsafe_allow_html=True)
         
-        # === MULTI-AGENT PANEL (only when multi-agent mode was used) ===
+        # ===== MULTI-AGENT PANEL =====
         if result.multi_agent is not None:
             ma = result.multi_agent
-
-            # Mode badge
-            mode_color = "#ffd700" if ma.mode_used == "partial_sequential" else "#00ff88"
-            mode_label = "⚡ Partial Sequential (CRITICAL)" if ma.mode_used == "partial_sequential" else "⚡ Parallel"
+            
+            mode_class = "sequential" if ma.mode_used == "partial_sequential" else "parallel"
+            mode_label = "⚡ Partial Sequential" if ma.mode_used == "partial_sequential" else "⚡ Parallel"
+            
             st.markdown(f"""
-            <div style='display:inline-block; background:{mode_color}22; border:1px solid {mode_color}; 
-                         color:{mode_color}; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.85rem; margin-bottom:0.5rem;'>
-                🤖 {mode_label} &nbsp;|&nbsp; {ma.total_time:.2f}s total
+            <div class="agent-badge {mode_class}">
+                🤖 {mode_label} • {ma.total_time:.2f}s
             </div>
             """, unsafe_allow_html=True)
-
+            
             tab1, tab2, tab3 = st.tabs(["🔍 Root Cause", "📊 Impact", "🛠️ Actions"])
-
-            # --- TAB 1: ROOT CAUSE ---
+            
             with tab1:
                 rc = ma.root_cause
                 if rc.trigger:
                     st.markdown(f"**Trigger:** {rc.trigger}")
-                    st.markdown("")
-
+                    
                     if rc.causal_chain:
-                        # Render causal chain as visual flow
                         chain_html = ""
                         for i, event in enumerate(rc.causal_chain):
-                            arrow = " <span style='color:#667eea; font-size:1.2rem;'>→</span> " if i < len(rc.causal_chain) - 1 else ""
                             is_last = (i == len(rc.causal_chain) - 1)
-                            bg = "rgba(102,126,234,0.15)" if not is_last else "rgba(255,80,80,0.15)"
-                            border = "#667eea" if not is_last else "#ff5050"
-                            chain_html += f"""<span style='display:inline-block; background:{bg}; border:1px solid {border}; 
-                                padding:0.3rem 0.6rem; border-radius:6px; margin:0.15rem; font-size:0.9rem;'>{event}</span>{arrow}"""
-                        st.markdown(f"<div style='line-height:2;'>{chain_html}</div>", unsafe_allow_html=True)
-                        st.markdown("")
-
+                            node_class = "root" if is_last else ""
+                            arrow = "<span class='chain-arrow'>→</span>" if not is_last else ""
+                            chain_html += f"<span class='chain-node {node_class}'>{html.escape(event)}</span>{arrow}"
+                        st.markdown(f"<div class='causal-chain'>{chain_html}</div>", unsafe_allow_html=True)
+                    
                     if rc.confidence:
-                        st.progress(rc.confidence / 100, text=f"Root Cause Confidence: {rc.confidence}%")
-
+                        st.progress(rc.confidence / 100, text=f"Confidence: {rc.confidence}%")
+                    
                     if rc.reasoning:
                         st.markdown(f"**Reasoning:** {rc.reasoning}")
                 else:
                     st.info("Root cause agent did not produce a result.")
-
-            # --- TAB 2: IMPACT ---
+            
             with tab2:
                 imp = ma.impact
                 col_a, col_b = st.columns(2)
@@ -659,524 +1209,231 @@ ANTHROPIC_API_KEY=sk-ant-your_key_here""")
                     if imp.affected_systems:
                         st.markdown("**Affected Systems**")
                         for s in imp.affected_systems:
-                            st.markdown(f"  • {s}")
+                            st.markdown(f"• {s}")
                     if imp.estimated_duration:
-                        st.markdown(f"\n**Duration:** {imp.estimated_duration}")
+                        st.markdown(f"**Duration:** {imp.estimated_duration}")
                 with col_b:
                     if imp.financial_impact:
-                        # Enhanced financial impact display
-                        if imp.financial_impact == "Unknown" or "unknown" in imp.financial_impact.lower():
-                            # Try to estimate from user impact
-                            estimated_cost = None
-                            if imp.user_impact:
-                                users_match = re.search(r'(\d+(?:,\d+)?)', imp.user_impact)
-                                if users_match:
-                                    users = int(users_match.group(1).replace(',', ''))
-                                    if users > 10000:
-                                        estimated_cost = f"$500k-$1M estimated (based on {users:,} users affected)"
-                                    elif users > 1000:
-                                        estimated_cost = f"$50k-$500k estimated (based on {users:,} users affected)"
-                                    elif users > 100:
-                                        estimated_cost = f"$5k-$50k estimated (based on {users:,} users affected)"
-                            
-                            if estimated_cost:
-                                st.markdown(f"**💰 Financial Impact:** {estimated_cost}")
-                                st.caption("⚠️ Estimated - actual cost may vary")
-                            else:
-                                st.markdown(f"**💰 Financial Impact:** {imp.financial_impact}")
-                        else:
-                            st.markdown(f"**💰 Financial Impact:** {imp.financial_impact}")
-                    
+                        st.markdown(f"**💰 Financial Impact:** {imp.financial_impact}")
                     if imp.severity_justification:
-                        st.markdown(f"\n**Why this severity:** {imp.severity_justification}")
-
+                        st.markdown(f"**Why this severity:** {imp.severity_justification}")
+                
                 if imp.user_impact:
-                    st.markdown("")
                     st.markdown(f"> {imp.user_impact}")
-
-                if not any([imp.affected_systems, imp.user_impact, imp.estimated_duration]):
-                    st.info("Impact agent did not produce a result.")
-
-            # --- TAB 3: ACTIONS ---
+            
             with tab3:
                 act = ma.actions
                 if act.immediate:
                     st.markdown("### 🔴 Immediate — Do NOW")
                     for i, step in enumerate(act.immediate, 1):
-                        st.markdown(f"  {i}. {step}")
-                    st.markdown("")
-
+                        st.markdown(f"{i}. {step}")
+                
                 if act.short_term:
                     st.markdown("### 🟡 Short-Term — Next 1-2 hours")
                     for i, step in enumerate(act.short_term, 1):
-                        st.markdown(f"  {i}. {step}")
-                    st.markdown("")
-
+                        st.markdown(f"{i}. {step}")
+                
                 if act.preventive:
                     st.markdown("### 🟢 Preventive — After incident")
                     for i, step in enumerate(act.preventive, 1):
-                        st.markdown(f"  {i}. {step}")
-                    st.markdown("")
-
+                        st.markdown(f"{i}. {step}")
+                
                 if act.rollback_plan:
                     st.markdown(f"**🔙 Rollback Plan:** {act.rollback_plan}")
-
-                if not any([act.immediate, act.short_term, act.preventive]):
-                    st.info("Actions agent did not produce a result.")
-
-            # --- Enhanced Consistency check results (compares 3 analysis agents) ---
+            
+            # Consistency check
             if ma.consistency:
                 cons = ma.consistency
-                st.markdown("")
-
-                # Only show factual conflicts if they actually exist (and aren't just placeholder text)
                 if hasattr(cons, 'factual_conflicts') and cons.factual_conflicts:
-                    # Filter out empty/placeholder conflicts
                     real_conflicts = [c for c in cons.factual_conflicts 
-                                     if c.strip() and 
-                                     'no conflicts' not in c.lower() and
-                                     'none found' not in c.lower() and
-                                     'all agents agree' not in c.lower() and
-                                     'no disagreement' not in c.lower()]
-                    
+                                     if c.strip() and 'no conflicts' not in c.lower()]
                     if real_conflicts:
-                        st.error(f"🔴 **Factual Conflicts** — {len(real_conflicts)} detected")
-                        st.warning("**Analysis agents disagree on objective facts - MANUAL REVIEW REQUIRED**")
-                        st.caption("These are disagreements between Root Cause, Impact, and Actions agents on factual details from the log (system ID, severity, etc.)")
-                        for i, c in enumerate(real_conflicts, 1):
-                            st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{i}. {c}")
-                        st.markdown("")
-
-                # Only show interpretation conflicts if they actually exist
-                if hasattr(cons, 'interpretation_conflicts') and cons.interpretation_conflicts:
-                    # Filter out empty/placeholder conflicts
-                    real_interp = [c for c in cons.interpretation_conflicts 
-                                  if c.strip() and 
-                                  'no conflicts' not in c.lower() and
-                                  'none found' not in c.lower() and
-                                  'all agents agree' not in c.lower()]
-                    
-                    if real_interp:
-                        st.info(f"⚠️ **Interpretation Variance** — {len(real_interp)} perspective(s)")
-                        st.caption("Different perspectives among Root Cause, Impact, and Actions agents (healthy disagreement)")
-                        with st.expander("View different interpretations"):
-                            for i, c in enumerate(real_interp, 1):
-                                st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{i}. {c}")
-                        st.markdown("")
+                        st.error(f"🔴 **Factual Conflicts:** {len(real_conflicts)} detected")
+                        for c in real_conflicts:
+                            st.markdown(f"• {c}")
                 
-                # Backward compatibility for old multi_agent
-                elif hasattr(cons, 'contradictions') and cons.contradictions:
-                    st.warning(f"⚠️ **Agent Disagreement** — {len(cons.contradictions)} contradiction(s) detected")
-                    for i, c in enumerate(cons.contradictions, 1):
-                        st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;{i}. {c}")
-                    st.markdown("")
-
-                # Display quality assessment (new in enhanced)
-                if hasattr(cons, 'quality_assessment') and cons.quality_assessment:
-                    quality_icons = {'HIGH': '🟢', 'MEDIUM': '🟡', 'LOW': '🔴'}
-                    quality_level = cons.quality_assessment.split()[0] if cons.quality_assessment else 'UNKNOWN'
-                    quality_icon = quality_icons.get(quality_level, '⚪')
-                    st.markdown(f"**Quality:** {quality_icon} {cons.quality_assessment}")
-                    st.markdown("")
-
                 if cons.recommendation:
                     st.info(f"💡 **Recommendation:** {cons.recommendation}")
-
-                if cons.agreements:
-                    with st.expander("✅ Agent Agreements", expanded=False):
-                        for a in cons.agreements:
-                            st.markdown(f"  • {a}")
-
-                if cons.confidence:
-                    st.progress(
-                        cons.confidence / 100,
-                        text=f"Overall coherence: {cons.confidence}%"
-                    )
-
-
-            st.markdown("<br>", unsafe_allow_html=True)
-
-        # NOTE: AI Analysis section removed - redundant with multi-agent output above
         
-        # === EXPANDABLE SECTIONS ===
-        
-        # No contacts/solutions warning
+        # ===== EXPANDABLES =====
         if not result.contacts and not result.solutions:
-            st.warning("⚠️ No contacts or solutions found in KB. The incident may not match known patterns.")
-            st.info("💡 Tip: Ensure knowledge base is properly embedded with contacts.md and runbooks.md")
+            st.warning("⚠️ No contacts or solutions found in KB.")
         
-        # Sanitized log preview with highlighting
         sanitized_text = result.sanitization.sanitized_text if result.sanitization else log_content
         redaction_info = ""
         if result.sanitization and result.sanitization.was_sanitized:
-            redaction_count = len(result.sanitization.audit_trail)
-            llm_count = len(result.sanitization.llm_findings)
-            total_redacted = redaction_count + llm_count
-            redaction_info = f" • {total_redacted} item(s) redacted"
+            total = len(result.sanitization.audit_trail) + len(result.sanitization.llm_findings)
+            redaction_info = f" • {total} item(s) redacted"
         
-        with st.expander(f"📋 Sanitized Log (sent to AI){redaction_info}", expanded=False):
+        with st.expander(f"📋 Sanitized Log{redaction_info}"):
             st.markdown(f"""
-            <div style='background: rgba(0,0,0,0.8); padding: 1rem; border-radius: 8px; 
-                        max-height: 500px; overflow-y: auto; font-family: monospace; 
-                        font-size: 0.85rem; line-height: 1.4;'>
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 10px; 
+                        max-height: 400px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; 
+                        font-size: 0.8125rem; line-height: 1.6; border: 1px solid var(--border-subtle);">
                 {highlight_errors(sanitized_text).replace(chr(10), "<br>")}
             </div>
             """, unsafe_allow_html=True)
-            
-            # Show what was redacted
-            if result.sanitization and result.sanitization.was_sanitized:
-                st.caption("🔒 Privacy: PII was redacted before sending to AI")
-                if result.sanitization.audit_trail:
-                    redacted_types = {}
-                    for audit in result.sanitization.audit_trail:
-                        redacted_types[audit.pattern_type] = redacted_types.get(audit.pattern_type, 0) + 1
-                    type_summary = ", ".join([f"{count} {ptype}" for ptype, count in redacted_types.items()])
-                    st.caption(f"Redacted: {type_summary}")
-
         
-        # Technical details
-        with st.expander("⚙️ Technical Details", expanded=False):
+        with st.expander("⚙️ Technical Details"):
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"""
-                **System Information:**
+                **System Info:**
                 - Issue Type: `{result.issue_type}`
                 - Severity: `{result.severity}`
                 - System: `{result.system}`
                 - Timestamp: `{result.timestamp or 'N/A'}`
-                - Component: `{result.affected_component or 'N/A'}`
-                - Contacts Found: `{len(result.contacts)}`
-                - Solutions Found: `{len(result.solutions)}`
                 """)
             with col2:
                 st.markdown(f"""
-                **Analysis Metadata:**
+                **Analysis:**
                 - Backend: `{result.backend_used}`
-                - KB Sources: `{result.knowledge_sources}`
                 - Confidence: `{result.confidence:.1%}`
-                - Processing Time: `{result.processing_time:.2f}s`
-                - Timeline Events: `{len(result.timeline)}`
+                - Processing: `{result.processing_time:.2f}s`
                 """)
         
-        # Export section
+        # ===== ACTION BUTTONS - FIXED =====
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Create unified button HTML for all 3 buttons
-        def create_action_button(button_id: str, label: str, action_type: str):
-            """Creates a unified HTML button style for all actions"""
-            slack_text_json = ""
-            if action_type == "slack":
-                slack_text_json = json.dumps(format_for_slack(result))
-            
-            button_html = f"""
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <style>
-                    * {{
-                        margin: 0;
-                        padding: 0;
-                        box-sizing: border-box;
-                    }}
-                    
-                    body {{
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                        background: transparent;
-                        position: relative;
-                    }}
-                    
-                    .action-button {{
-                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                        border: none;
-                        border-radius: 8px;
-                        color: white;
-                        cursor: pointer;
-                        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-                        font-size: 14px;
-                        font-weight: 600;
-                        padding: 12px 24px;
-                        text-align: center;
-                        width: 100%;
-                        height: 44px;
-                        transition: all 0.2s ease;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        gap: 8px;
-                        box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-                    }}
-                    
-                    .action-button:hover {{
-                        transform: translateY(-2px);
-                        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-                    }}
-                    
-                    .action-button:active {{
-                        transform: translateY(0);
-                    }}
-                    
-                    .toast {{
-                        position: absolute;
-                        top: 50%;
-                        left: 50%;
-                        transform: translate(-50%, -50%);
-                        background: white;
-                        color: #1f2937;
-                        padding: 12px 20px;
-                        border-radius: 8px;
-                        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-                        z-index: 10000;
-                        font-size: 14px;
-                        font-weight: 500;
-                        display: flex;
-                        align-items: center;
-                        gap: 12px;
-                        animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        white-space: nowrap;
-                    }}
-                    
-                    .toast.success {{
-                        border-left: 4px solid #10b981;
-                    }}
-                    
-                    .toast.error {{
-                        border-left: 4px solid #ef4444;
-                    }}
-                    
-                    .toast.hide {{
-                        animation: fadeOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    }}
-                    
-                    @keyframes fadeIn {{
-                        from {{
-                            opacity: 0;
-                            transform: translate(-50%, -50%) scale(0.9);
-                        }}
-                        to {{
-                            opacity: 1;
-                            transform: translate(-50%, -50%) scale(1);
-                        }}
-                    }}
-                    
-                    @keyframes fadeOut {{
-                        from {{
-                            opacity: 1;
-                            transform: translate(-50%, -50%) scale(1);
-                        }}
-                        to {{
-                            opacity: 0;
-                            transform: translate(-50%, -50%) scale(0.9);
-                        }}
-                    }}
-                </style>
-            </head>
-            <body>
-                <button class="action-button" onclick="handleClick()" id="{button_id}">
-                    {label}
-                </button>
-                
-                <script>
-                function showToast(message, type = 'success') {{
-                    const toast = document.createElement('div');
-                    toast.className = `toast ${{type}}`;
-                    const icon = type === 'success' ? '✅' : '❌';
-                    toast.innerHTML = `<span>${{icon}}</span><span>${{message}}</span>`;
-                    document.body.appendChild(toast);
-                    
-                    setTimeout(() => {{
-                        toast.classList.add('hide');
-                        setTimeout(() => document.body.removeChild(toast), 300);
-                    }}, 2500);
-                }}
-                
-                function handleClick() {{
-                    const actionType = '{action_type}';
-                    
-                    if (actionType === 'slack') {{
-                        const text = {slack_text_json};
-                        navigator.clipboard.writeText(text).then(
-                            () => showToast('Copied to clipboard!', 'success'),
-                            () => showToast('Failed to copy', 'error')
-                        );
-                    }} else if (actionType === 'new') {{
-                        window.parent.postMessage({{type: 'streamlit:setComponentValue', value: 'new_analysis'}}, '*');
-                    }}
-                }}
-                </script>
-            </body>
-            </html>
-            """
-            return button_html
+        # Use columns with equal spacing for alignment
+        col1, col2, col3 = st.columns(3)
         
-        col1, col2, col3, col4 = st.columns([1, 1, 1, 1])
-        
-        # Export as PDF
-        with col2:
+        # Export PDF - FIXED
+        with col1:
             if REPORTLAB_AVAILABLE:
                 try:
-                    # Generate PDF
                     buffer = io.BytesIO()
-                    doc = SimpleDocTemplate(buffer, pagesize=letter, topMargin=0.5*inch, bottomMargin=0.5*inch)
-                    story = []
-                    styles = getSampleStyleSheet()
+                    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                                        rightMargin=72, leftMargin=72,
+                                        topMargin=72, bottomMargin=18)
                     
-                    # Custom styles
+                    styles = getSampleStyleSheet()
+                    story = []
+                    
+                    # Title
                     title_style = ParagraphStyle(
                         'CustomTitle',
                         parent=styles['Heading1'],
                         fontSize=24,
-                        textColor=colors.HexColor('#667eea'),
-                        spaceAfter=12,
-                        alignment=TA_CENTER
+                        textColor=colors.HexColor('#6366f1'),
+                        spaceAfter=30
                     )
+                    story.append(Paragraph("LogGuard Incident Report", title_style))
+                    story.append(Spacer(1, 12))
                     
-                    heading_style = ParagraphStyle(
-                        'CustomHeading',
-                        parent=styles['Heading2'],
-                        fontSize=16,
-                        textColor=colors.HexColor('#764ba2'),
-                        spaceAfter=10,
-                        spaceBefore=15
-                    )
-                    
-                    # Title
-                    story.append(Paragraph("🔥 Incident Analysis Report", title_style))
-                    story.append(Spacer(1, 0.3*inch))
-                    
-                    # Summary table
-                    summary_data = [
+                    # Metadata
+                    meta_data = [
+                        ['Incident ID:', f"INC-{int(time.time())}"],
                         ['System:', result.system],
                         ['Severity:', result.severity],
-                        ['Issue Type:', result.issue_type],
-                        ['Confidence:', f'{result.confidence:.0%}'],
-                        ['Timestamp:', result.timestamp or 'Unknown'],
-                        ['Component:', result.affected_component or 'N/A']
+                        ['Component:', result.affected_component or "N/A"],
+                        ['Confidence:', f"{result.confidence:.0%}"],
+                        ['Analysis Time:', f"{elapsed:.2f}s"]
                     ]
-                    
-                    summary_table = Table(summary_data, colWidths=[2*inch, 4*inch])
-                    summary_table.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#f3f4f6')),
+                    meta_table = Table(meta_data, colWidths=[2*inch, 4*inch])
+                    meta_table.setStyle(TableStyle([
+                        ('BACKGROUND', (0, 0), (0, -1), colors.lightgrey),
                         ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
                         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                         ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-                        ('FONTSIZE', (0, 0), (-1, -1), 11),
-                        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
-                        ('TOPPADDING', (0, 0), (-1, -1), 8),
-                        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+                        ('FONTSIZE', (0, 0), (-1, -1), 10),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 12),
+                        ('GRID', (0, 0), (-1, -1), 1, colors.grey)
                     ]))
-                    story.append(summary_table)
-                    story.append(Spacer(1, 0.3*inch))
+                    story.append(meta_table)
+                    story.append(Spacer(1, 20))
+                    
+                    # Analysis Summary
+                    story.append(Paragraph("Analysis Summary", styles['Heading2']))
+                    analysis_text = result.analysis if not result.multi_agent else (
+                        result.multi_agent.root_cause.trigger if result.multi_agent.root_cause else result.analysis
+                    )
+                    story.append(Paragraph(analysis_text, styles['BodyText']))
+                    story.append(Spacer(1, 12))
                     
                     # Contacts
                     if result.contacts:
-                        story.append(Paragraph("📞 Who to Contact", heading_style))
-                        for contact in result.contacts[:3]:
-                            contact_text = f"<b>{contact.name}</b> - {contact.role}<br/>"
-                            contact_text += f"Email: {contact.email}<br/>"
-                            if contact.phone:
-                                contact_text += f"Phone: {contact.phone}<br/>"
+                        story.append(Paragraph("Key Contacts", styles['Heading2']))
+                        for contact in result.contacts:
+                            contact_info = f"<b>{contact.name}</b> - {contact.role}<br/>" \
+                                        f"Email: {contact.email}<br/>" \
+                                        f"Phone: {contact.phone or 'N/A'}"
                             if contact.escalation_contact:
-                                contact_text += f"<font color='#d97706'>Escalate to: {contact.escalation_contact}"
-                                if contact.escalation_time:
-                                    contact_text += f" (after {contact.escalation_time})"
-                                contact_text += "</font>"
-                            story.append(Paragraph(contact_text, styles['Normal']))
-                            story.append(Spacer(1, 0.15*inch))
+                                contact_info += f"<br/>Escalate to: {contact.escalation_contact}"
+                            story.append(Paragraph(contact_info, styles['BodyText']))
+                            story.append(Spacer(1, 6))
+                        story.append(Spacer(1, 12))
                     
                     # Solutions
                     if result.solutions:
-                        story.append(Paragraph("🛠️ Solutions from Runbooks", heading_style))
-                        for sol in result.solutions:
-                            story.append(Paragraph(f"<b>{sol.title}</b>", styles['Normal']))
-                            story.append(Paragraph(f"Owner: {sol.owner.name} ({sol.owner.email})", styles['Normal']))
-                            story.append(Paragraph(f"Duration: {sol.duration}", styles['Normal']))
-                            story.append(Spacer(1, 0.1*inch))
-                            
-                            story.append(Paragraph("<b>Steps:</b>", styles['Normal']))
-                            for i, step in enumerate(sol.steps, 1):
-                                story.append(Paragraph(f"{i}. {step}", styles['Normal']))
-                            story.append(Spacer(1, 0.15*inch))
+                        story.append(Paragraph("Recommended Solutions", styles['Heading2']))
+                        for i, sol in enumerate(result.solutions, 1):
+                            story.append(Paragraph(f"<b>Solution {i}: {sol.title}</b>", styles['Heading3']))
+                            story.append(Paragraph(f"Owner: {sol.owner.name} | Duration: {sol.duration}", styles['Italic']))
+                            for step in sol.steps:
+                                story.append(Paragraph(f"• {step}", styles['BodyText']))
+                            story.append(Spacer(1, 6))
                     
-                    # Analysis
-                    story.append(Paragraph("🧠 AI Analysis", heading_style))
-                    story.append(Paragraph(result.analysis, styles['Normal']))
+                    # Timeline
+                    if result.timeline:
+                        story.append(Paragraph("Event Timeline", styles['Heading2']))
+                        timeline_data = [['Time', 'Component', 'Event']]
+                        for event in result.timeline[:10]:
+                            timeline_data.append([
+                                event['timestamp'],
+                                event['component'],
+                                event['message'][:100] + '...' if len(event['message']) > 100 else event['message']
+                            ])
+                        timeline_table = Table(timeline_data, colWidths=[1.5*inch, 1.2*inch, 3.3*inch])
+                        timeline_table.setStyle(TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6366f1')),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                            ('FONTSIZE', (0, 0), (-1, 0), 10),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+                            ('VALIGN', (0, 0), (-1, -1), 'TOP')
+                        ]))
+                        story.append(timeline_table)
                     
                     doc.build(story)
-                    pdf_data = buffer.getvalue()
-                    buffer.close()
                     
                     st.download_button(
-                        label="📥 Export PDF Report",
-                        data=pdf_data,
-                        file_name=f"incident_analysis_{int(time.time())}.pdf",
+                        "📥 Export PDF", 
+                        buffer.getvalue(),
+                        f"incident_report_{result.system}_{int(time.time())}.pdf",
                         mime="application/pdf",
                         use_container_width=True
                     )
-                    
                 except Exception as e:
-                    st.error(f"Failed to generate PDF: {e}")
+                    st.error(f"PDF Error: {str(e)}")
             else:
-                # Fallback to markdown if reportlab not available
-                export_content = f"""# Incident Analysis Report
-
-## Summary
-- **System**: {result.system}
-- **Severity**: {result.severity}
-- **Issue Type**: {result.issue_type}
-- **Confidence**: {result.confidence:.0%}
-- **Timestamp**: {result.timestamp or 'Unknown'}
-
-## Contacts
-"""
-                if result.contacts:
-                    for c in result.contacts:
-                        export_content += f"\n### {c.name}\n"
-                        export_content += f"- **Role**: {c.role}\n"
-                        export_content += f"- **Email**: {c.email}\n"
-                        if c.phone:
-                            export_content += f"- **Phone**: {c.phone}\n"
-                        if c.escalation_contact:
-                            export_content += f"- **Escalate to**: {c.escalation_contact}"
-                            if c.escalation_time:
-                                export_content += f" (after {c.escalation_time})"
-                            export_content += "\n"
-                else:
-                    export_content += "No contacts identified\n"
-                
-                export_content += "\n## Solutions\n"
-                if result.solutions:
-                    for sol in result.solutions:
-                        export_content += f"\n### {sol.title}\n"
-                        export_content += f"- **Owner**: {sol.owner.name} ({sol.owner.email})\n"
-                        export_content += f"- **Duration**: {sol.duration}\n"
-                        export_content += "\n**Steps**:\n"
-                        for i, step in enumerate(sol.steps, 1):
-                            export_content += f"{i}. {step}\n"
-                else:
-                    export_content += "No solutions identified\n"
-                
-                export_content += f"\n## AI Analysis\n{result.analysis}\n"
-                
-                st.download_button(
-                    label="📥 Export Report (MD)",
-                    data=export_content,
-                    file_name=f"analysis_{int(time.time())}.md",
-                    mime="text/markdown",
-                    use_container_width=True
-                )
+                st.button("📥 Export PDF", disabled=True, help="Install reportlab: pip install reportlab")
         
-        # Copy for Slack
-        with col3:
+        # Copy for Slack - FIXED with toast notification
+        with col2:
             slack_text = format_for_slack(result)
-            st.components.v1.html(
-                create_action_button("slack_btn", "📋 Copy for Slack", "slack"),
-                height=44
-            )
+            
+            # Use native Streamlit button with session state for click tracking
+            if st.button("📋 Copy for Slack", use_container_width=True, key="copy_slack"):
+                # Copy to clipboard using Streamlit's built-in method
+                st.write(f"""
+                <script>
+                    navigator.clipboard.writeText({json.dumps(slack_text)});
+                </script>
+                """, unsafe_allow_html=True)
+                
+                # Show native toast notification
+                st.toast("✅ Copied to clipboard!", icon="📋")
+                
+                # Small delay to show the toast
+                time.sleep(0.1)
         
         # New analysis button
-        with col4:
+        with col3:
             if st.button("🔄 New Analysis", type="primary", use_container_width=True):
-                # Clear all session state to start fresh
                 for key in list(st.session_state.keys()):
                     del st.session_state[key]
                 st.rerun()

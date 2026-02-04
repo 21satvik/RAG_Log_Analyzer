@@ -216,7 +216,7 @@ class LLMSanitizer:
 
     MAX_CHUNK_SIZE = 3000
     OVERLAP = 200
-    MAX_TOTAL_TIME = 180  # NEW: 3 minutes max for entire Layer 2 processing
+    MAX_TOTAL_TIME = 60  # NEW: 1 minute max for entire Layer 2 processing
 
     PROMPT = """You are a PII sanitizer. Your job: redact names, emails, IPs, phone numbers, and any personal data from this log excerpt.
 
