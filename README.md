@@ -1,5 +1,7 @@
 # 🛡️ LogGuard
 
+[Demo](https://logguard.duckdns.org/)
+
 **RAG-powered log analysis with multi-agent intelligence**
 
 AI log analyzer that knows your infrastructure. Runs on Groq (fast), Claude (accurate), or Ollama (local).
