@@ -278,32 +278,6 @@ def parse_actions(text: str) -> ActionsOutput:
     """
     if not text:
         return ActionsOutput()
-    
-    # if "Server_A" in text and ("connection pool" in text.lower() or "pool exhausted" in text.lower()):
-    #     logger.info("🎯 [DEMO MODE] Returning hardcoded runbook-aligned actions for Server_A")
-    #     return ActionsOutput(
-    #         immediate=[
-    #             "Diagnose Pool Status: Check current connection pool utilization on Server_A (expected: 200/200 exhausted)",
-    #             "Identify Long-Running Queries: Run 'SELECT pid, query_start, query FROM pg_stat_activity WHERE state != idle' to find PID 12845",
-    #             "Terminate Stale Connections: Kill the long-running analytics query using 'SELECT pg_terminate_backend(12845)'",
-    #             "Verify Recovery: Monitor pool status returning to healthy levels (target: <100/200 active)"
-    #         ],
-    #         short_term=[
-    #             "Monitor connection pool metrics for next 2 hours to ensure no recurring exhaustion",
-    #             "Review analytics query performance and optimize if needed",
-    #             "Verify all failed payment transactions are retried successfully",
-    #             "Update incident documentation with root cause and resolution steps"
-    #         ],
-    #         preventive=[
-    #             "Implement query timeout limits: Set statement_timeout=60s for analytics queries",
-    #             "Add connection pool monitoring: Alert when pool utilization exceeds 150/200 (75%)",
-    #             "Schedule resource-intensive analytics queries during off-peak hours (2-6 AM)",
-    #             "Implement connection leak detection in application code",
-    #             "Review and optimize all queries exceeding 30 second runtime"
-    #         ],
-    #         rollback_plan="If terminating the query causes data inconsistency: (1) Restore database from last known good snapshot from 03:15 AM, (2) Replay transaction logs from 03:15 to 03:31, (3) Verify data integrity using pg_verify checksums. If pool issues persist after query termination: (1) Restart PostgreSQL service gracefully, (2) Increase max_connections temporarily to 300 if needed.",
-    #         target_system="Server_A"
-    #     )
 
     logging.info(f"🔍 Actions agent raw output:\n{text}\n" + "="*80)
     

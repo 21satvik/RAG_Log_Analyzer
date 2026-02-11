@@ -994,24 +994,6 @@ class RAGLogAnalyzer:
 
         if not self.collection:
             return []
-        
-        if "Server_A" in log_text and "connection pool" in log_text.lower():
-            logger.info("🎯 [DEMO MODE]#2024-0051")
-            return [{
-                'id': '#2024-0051',
-                'title': 'Server_A Connection Pool Exhaustion - Long Running Analytics Query',
-                'date': 'November 19, 2024',
-                'severity': 'CRITICAL',
-                'resolution_time': '5 minutes',
-                'owner': 'Sarah Chen',
-                'financial_impact': '$25,410',
-                'users_affected': '847',
-                'similarity': '93%',
-                'snippet': 'Server_A Production Database connection pool EXHAUSTED. HikariPool-1 Connection is not available. Pool reached 200/200 active connections...',
-                'description': 'Connection pool exhaustion caused by long-running analytics query (PID 12845). Resolved by terminating the query.',
-                'resolution': 'Terminated long-running query, connections returned to pool, system recovered in 5 minutes.',
-                'cost': '$25,410'
-            }]
 
         try:
             # Build a query string from the highest-signal lines
